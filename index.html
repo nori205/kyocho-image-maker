@@ -394,8 +394,8 @@ let state = {
   bg: "#FFFFFF",
   bgOpacity: 1,
   lines: [
-    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false},
-    {text:"", size:130, color:"#E8332E", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false},
+    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"},
+    {text:"", size:130, color:"#E8332E", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"},
   ]
 };
 
@@ -421,7 +421,7 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
   const scale = chars.length * drawSize * 1.15 > maxH ? maxH / (chars.length * drawSize * 1.15) : 1;
   const ds = Math.floor(drawSize * scale);
   const charH = ds * 1.15;
-  const startY = (s.h - chars.length * charH) / 2 + (l.margin || 0);
+  const startY = (l.valign === "top" ? s.h * 0.05 : (s.h - chars.length * charH) / 2) + (l.margin || 0);
   ctx.font = fontStr(l, ds);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
@@ -963,6 +963,23 @@ function buildLines(){
     rowA.appendChild(awrap);
     card.appendChild(rowA);
 
+    if(l.vertical){
+      const rowV = document.createElement("div");
+      rowV.className = "ctrl-row";
+      rowV.innerHTML = '<span class="ctrl-label">縦位置</span>';
+      const vwrap = document.createElement("div");
+      vwrap.style.cssText = "display:flex;gap:6px";
+      [["center","中央"],["top","頭揃え"]].forEach(([val,label])=>{
+        const b = document.createElement("button");
+        b.className = "chip" + ((l.valign||"center")===val?" active":"");
+        b.textContent = label;
+        b.onclick = ()=>{ l.valign=val; buildLines(); render(); };
+        vwrap.appendChild(b);
+      });
+      rowV.appendChild(vwrap);
+      card.appendChild(rowV);
+    }
+
     const mini = document.createElement("div");
     mini.className = "mini-row";
     const bold = document.createElement("button");
@@ -990,7 +1007,7 @@ function mkDel(fn){ const b=mkBtn("✕",fn); b.classList.add("del"); return b; }
 function swapArr(arr,a,b,rebuild){ const t=arr[a]; arr[a]=arr[b]; arr[b]=t; rebuild(); render(); }
 
 document.getElementById("addLine").onclick = ()=>{
-  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false});
+  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"});
   buildLines(); render();
   const tas = linesEl.querySelectorAll("textarea");
   tas[tas.length-1].focus();
