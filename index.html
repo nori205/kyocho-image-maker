@@ -421,7 +421,7 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
   const scale = chars.length * drawSize * 1.15 > maxH ? maxH / (chars.length * drawSize * 1.15) : 1;
   const ds = Math.floor(drawSize * scale);
   const charH = ds * 1.15;
-  const startY = (s.h - chars.length * charH) / 2;
+  const startY = (s.h - chars.length * charH) / 2 + (l.margin || 0);
   ctx.font = fontStr(l, ds);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
