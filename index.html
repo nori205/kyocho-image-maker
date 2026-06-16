@@ -1330,7 +1330,7 @@ function buildHistory(){
         Object.values(chat.persons).forEach(p=>{
           if(p.imgSrc && typeof p.imgSrc === "string"){
             const img = new Image();
-            img.onload = ()=>{ p.img = img; render(); };
+            img.onload = ()=>{ p.img = img; buildPersons(); render(); };
             img.src = p.imgSrc;
           } else {
             p.img = null;
