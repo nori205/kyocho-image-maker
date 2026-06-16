@@ -256,6 +256,9 @@
   }
   .icon-pick-item:hover .icon-pick-del{display:block}
   .icon-pick-del:hover{background:rgba(200,50,50,.85)}
+  @media (hover:none){
+    .icon-pick-del{display:block}
+  }
   #icon-add-btn{
     width:100%;border:2px dashed var(--line);background:transparent;border-radius:12px;
     padding:11px;font-size:13px;font-weight:700;color:var(--muted);
@@ -1493,7 +1496,7 @@ function compressAndAddIcon(dataUrl, cb){
   const cx2 = c.getContext("2d");
   const tmp = new Image();
   tmp.onload = ()=>{
-    const sc = Math.min(256/tmp.width, 256/tmp.height);
+    const sc = Math.max(256/tmp.width, 256/tmp.height);
     cx2.drawImage(tmp, (256-tmp.width*sc)/2, (256-tmp.height*sc)/2, tmp.width*sc, tmp.height*sc);
     const thumb = c.toDataURL("image/jpeg", 0.82);
     addToIconHist(thumb);
