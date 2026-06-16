@@ -209,23 +209,48 @@
     font-size:9px;font-weight:800;padding:1px 5px;
   }
 
-  /* ===== アイコン履歴 ===== */
-  .icon-hist-wrap{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0;padding:2px 0}
-  .icon-hist-item{position:relative;width:40px;height:40px;flex-shrink:0}
-  .icon-hist-thumb{
-    width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;
-    border:2.5px solid var(--line);cursor:pointer;transition:border-color .12s;
+  /* ===== アイコンピッカーポップアップ ===== */
+  #icon-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.3)}
+  #icon-overlay.open{display:block}
+  #icon-popup{
+    display:none;position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);z-index:1000;
+    background:#fff;border-radius:18px;padding:16px;
+    box-shadow:0 8px 40px rgba(0,0,0,.22);
+    width:min(340px,90vw);max-height:72vh;overflow-y:auto;
   }
-  .icon-hist-thumb:hover{border-color:var(--ink)}
-  .icon-hist-thumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
-  .icon-hist-del{
-    display:none;position:absolute;top:-4px;right:-4px;
-    width:17px;height:17px;border-radius:50%;
-    background:rgba(0,0,0,.5);color:#fff;border:none;
-    font-size:9px;cursor:pointer;padding:0;line-height:17px;text-align:center;
+  #icon-popup.open{display:block}
+  #icon-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  #icon-popup-title{font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.08em}
+  #icon-popup-close{border:none;background:none;font-size:18px;cursor:pointer;color:var(--muted);padding:2px 4px;line-height:1}
+  .icon-pick-label{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin:2px 0 8px}
+  .icon-pick-grid{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .icon-pick-item{position:relative;width:52px;flex-shrink:0}
+  .icon-pick-thumb{
+    width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;
+    border:2.5px solid var(--line);cursor:pointer;transition:border-color .12s,transform .1s;
   }
-  .icon-hist-item:hover .icon-hist-del{display:block}
-  .icon-hist-del:hover{background:rgba(200,50,50,.85)}
+  .icon-pick-thumb:hover{border-color:var(--ink);transform:scale(1.06)}
+  .icon-pick-thumb.sel{border-color:var(--accent);box-shadow:0 0 0 2.5px var(--accent)}
+  .icon-pick-star{
+    position:absolute;top:-4px;right:10px;width:17px;height:17px;border-radius:50%;
+    background:var(--card);border:none;font-size:10px;cursor:pointer;
+    padding:0;line-height:17px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.22);
+  }
+  .icon-pick-star:hover{transform:scale(1.2)}
+  .icon-pick-del{
+    display:none;position:absolute;top:-4px;right:-4px;width:17px;height:17px;border-radius:50%;
+    background:rgba(0,0,0,.45);color:#fff;border:none;font-size:9px;cursor:pointer;
+    padding:0;line-height:17px;text-align:center;
+  }
+  .icon-pick-item:hover .icon-pick-del{display:block}
+  .icon-pick-del:hover{background:rgba(200,50,50,.85)}
+  #icon-add-btn{
+    width:100%;border:2px dashed var(--line);background:transparent;border-radius:12px;
+    padding:11px;font-size:13px;font-weight:700;color:var(--muted);
+    cursor:pointer;font-family:inherit;margin-top:4px;
+  }
+  #icon-add-btn:hover{border-color:var(--ink);color:var(--ink)}
 
   /* ===== カラースウォッチ（ピッカー内） ===== */
   #iro-swatches{margin-top:12px}
@@ -373,6 +398,17 @@
       <button id="save">画像を保存（PNG）</button>
     </div>
   </div>
+</div>
+
+<div id="icon-overlay"></div>
+<div id="icon-popup">
+  <div id="icon-popup-head">
+    <span id="icon-popup-title">アイコンを選ぶ</span>
+    <button id="icon-popup-close">✕</button>
+  </div>
+  <div id="icon-picker-content"></div>
+  <input type="file" id="icon-file-input" accept="image/*" style="display:none">
+  <button id="icon-add-btn">📷 新しい画像を追加</button>
 </div>
 
 <div id="iro-overlay"></div>
@@ -1077,27 +1113,11 @@ function buildPerson(key, el, label){
   const imgRow = document.createElement("div");
   imgRow.className = "ctrl-row";
   imgRow.innerHTML = '<span class="ctrl-label">アイコン</span>';
-  const pick = document.createElement("button");
-  pick.className = "chip";
-  pick.textContent = p.img ? "📷 画像を変更" : "📷 画像を使う";
-  const file = document.createElement("input");
-  file.type = "file"; file.accept = "image/*"; file.style.display = "none";
-  pick.onclick = ()=> file.click();
-  file.onchange = e=>{
-    const f = e.target.files[0];
-    if(!f) return;
-    const reader = new FileReader();
-    reader.onload = ev=>{
-      saveIconToHistory(ev.target.result, thumb=>{
-        const img = new Image();
-        img.onload = ()=>{ p.img = img; p.imgSrc = thumb; buildPersons(); render(); };
-        img.src = thumb;
-      });
-    };
-    reader.readAsDataURL(f);
-  };
-  imgRow.appendChild(pick);
-  imgRow.appendChild(file);
+  const pickBtn = document.createElement("button");
+  pickBtn.className = "chip";
+  pickBtn.textContent = "📷 アイコンを選ぶ";
+  pickBtn.onclick = ()=> openIconPicker(key);
+  imgRow.appendChild(pickBtn);
   if(p.img && p.img.naturalWidth > 0){
     const thumb = document.createElement("img");
     thumb.src = p.imgSrc || p.img.src;
@@ -1110,43 +1130,6 @@ function buildPerson(key, el, label){
     imgRow.appendChild(back);
   }
   el.appendChild(imgRow);
-
-  const icons = getIcons();
-  if(icons.length > 0){
-    const iconHistRow = document.createElement("div");
-    iconHistRow.className = "ctrl-row";
-    iconHistRow.style.alignItems = "flex-start";
-    iconHistRow.innerHTML = '<span class="ctrl-label">履歴</span>';
-    const iconWrap = document.createElement("div");
-    iconWrap.className = "icon-hist-wrap";
-    icons.forEach((src, i)=>{
-      const item = document.createElement("div");
-      item.className = "icon-hist-item";
-      const th = document.createElement("img");
-      th.src = src;
-      th.className = "icon-hist-thumb" + (p.imgSrc === src ? " sel" : "");
-      th.title = "このアイコンを使う";
-      th.onclick = ()=>{
-        const img = new Image();
-        img.onload = ()=>{ p.img = img; p.imgSrc = src; buildPersons(); render(); };
-        img.src = src;
-      };
-      const delBtn = document.createElement("button");
-      delBtn.className = "icon-hist-del";
-      delBtn.textContent = "✕";
-      delBtn.title = "履歴から削除";
-      delBtn.onclick = e2=>{
-        e2.stopPropagation();
-        const list = getIcons(); list.splice(i,1);
-        try{ localStorage.setItem(ICON_KEY, JSON.stringify(list)); }catch(e){}
-        buildPersons();
-      };
-      item.append(th, delBtn);
-      iconWrap.appendChild(item);
-    });
-    iconHistRow.appendChild(iconWrap);
-    el.appendChild(iconHistRow);
-  }
 
   const row2 = document.createElement("div");
   row2.className = "ctrl-row";
@@ -1458,11 +1441,36 @@ function buildColorSwatches(){
   }
 }
 
-/* ================= アイコン履歴 ================= */
-const ICON_KEY = "kyocho_icons";
-const ICON_MAX = 20;
-function getIcons(){ try{ return JSON.parse(localStorage.getItem(ICON_KEY)||"[]"); }catch{ return []; } }
-function saveIconToHistory(dataUrl, cb){
+/* ================= アイコンピッカー ================= */
+const ICON_FAV_KEY  = "kyocho_icon_favs";
+const ICON_HIST_KEY = "kyocho_icon_hist";
+const ICON_HIST_MAX = 20;
+
+// 旧データ移行
+(()=>{ const old = localStorage.getItem("kyocho_icons"); if(old && !localStorage.getItem(ICON_HIST_KEY)){ localStorage.setItem(ICON_HIST_KEY,old); localStorage.removeItem("kyocho_icons"); } })();
+
+function getIconFavs(){ try{ return JSON.parse(localStorage.getItem(ICON_FAV_KEY)||"[]"); }catch{ return []; } }
+function getIconHist(){ try{ return JSON.parse(localStorage.getItem(ICON_HIST_KEY)||"[]"); }catch{ return []; } }
+function isIconFav(src){ return getIconFavs().indexOf(src) !== -1; }
+function toggleIconFav(src){
+  const list = getIconFavs();
+  const idx = list.indexOf(src);
+  if(idx !== -1) list.splice(idx,1); else list.unshift(src);
+  try{ localStorage.setItem(ICON_FAV_KEY, JSON.stringify(list)); }catch(e){}
+}
+function addToIconHist(src){
+  const list = getIconHist().filter(s => s !== src);
+  list.unshift(src);
+  if(list.length > ICON_HIST_MAX) list.length = ICON_HIST_MAX;
+  try{ localStorage.setItem(ICON_HIST_KEY, JSON.stringify(list)); }catch(e){}
+}
+function removeFromIconHist(src){
+  const list = getIconHist().filter(s => s !== src);
+  try{ localStorage.setItem(ICON_HIST_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+// 画像を256×256 JPEGに圧縮してhistに追加、cb(thumb)を呼ぶ
+function compressAndAddIcon(dataUrl, cb){
   const c = document.createElement("canvas");
   c.width = c.height = 256;
   const cx2 = c.getContext("2d");
@@ -1471,14 +1479,113 @@ function saveIconToHistory(dataUrl, cb){
     const sc = Math.min(256/tmp.width, 256/tmp.height);
     cx2.drawImage(tmp, (256-tmp.width*sc)/2, (256-tmp.height*sc)/2, tmp.width*sc, tmp.height*sc);
     const thumb = c.toDataURL("image/jpeg", 0.82);
-    const list = getIcons();
-    list.unshift(thumb);
-    if(list.length > ICON_MAX) list.length = ICON_MAX;
-    try{ localStorage.setItem(ICON_KEY, JSON.stringify(list)); }catch(e){}
+    addToIconHist(thumb);
     if(cb) cb(thumb);
   };
   tmp.src = dataUrl;
 }
+
+let iconPickerTarget = null;
+
+function buildIconPickerUI(){
+  const el = document.getElementById("icon-picker-content");
+  el.innerHTML = "";
+  const favs = getIconFavs();
+  const hist = getIconHist().filter(s => !isIconFav(s));
+
+  function makeItem(src, isFavIcon){
+    const wrap = document.createElement("div");
+    wrap.className = "icon-pick-item";
+    const th = document.createElement("img");
+    const p = iconPickerTarget ? chat.persons[iconPickerTarget] : null;
+    th.src = src;
+    th.className = "icon-pick-thumb" + (p && p.imgSrc === src ? " sel" : "");
+    th.onclick = ()=>{
+      if(!iconPickerTarget) return;
+      const person = chat.persons[iconPickerTarget];
+      const img = new Image();
+      img.onload = ()=>{ person.img = img; person.imgSrc = src; buildPersons(); render(); };
+      img.src = src;
+      closeIconPicker();
+    };
+    const star = document.createElement("button");
+    star.className = "icon-pick-star";
+    star.textContent = isFavIcon ? "★" : "☆";
+    star.style.color = isFavIcon ? "#E8B020" : "rgba(0,0,0,.28)";
+    star.title = isFavIcon ? "お気に入りから削除" : "お気に入りに追加";
+    star.onclick = e=>{ e.stopPropagation(); toggleIconFav(src); buildIconPickerUI(); };
+    const del = document.createElement("button");
+    del.className = "icon-pick-del";
+    del.textContent = "✕";
+    del.onclick = e=>{
+      e.stopPropagation();
+      if(isFavIcon) toggleIconFav(src); else removeFromIconHist(src);
+      buildIconPickerUI();
+    };
+    wrap.append(th, star, del);
+    return wrap;
+  }
+
+  if(favs.length > 0){
+    const lbl = document.createElement("div");
+    lbl.className = "icon-pick-label";
+    lbl.textContent = "★ お気に入り";
+    el.appendChild(lbl);
+    const grid = document.createElement("div");
+    grid.className = "icon-pick-grid";
+    favs.forEach(s => grid.appendChild(makeItem(s, true)));
+    el.appendChild(grid);
+  }
+  if(hist.length > 0){
+    const lbl = document.createElement("div");
+    lbl.className = "icon-pick-label";
+    lbl.textContent = "履歴";
+    el.appendChild(lbl);
+    const grid = document.createElement("div");
+    grid.className = "icon-pick-grid";
+    hist.forEach(s => grid.appendChild(makeItem(s, false)));
+    el.appendChild(grid);
+  }
+  if(favs.length === 0 && hist.length === 0){
+    const empty = document.createElement("div");
+    empty.style.cssText = "text-align:center;color:var(--muted);font-size:13px;padding:24px 0";
+    empty.textContent = "まだ画像がありません";
+    el.appendChild(empty);
+  }
+}
+
+function openIconPicker(key){
+  iconPickerTarget = key;
+  buildIconPickerUI();
+  document.getElementById("icon-overlay").classList.add("open");
+  document.getElementById("icon-popup").classList.add("open");
+}
+function closeIconPicker(){
+  document.getElementById("icon-overlay").classList.remove("open");
+  document.getElementById("icon-popup").classList.remove("open");
+  iconPickerTarget = null;
+}
+document.getElementById("icon-overlay").onclick = closeIconPicker;
+document.getElementById("icon-popup-close").onclick = closeIconPicker;
+document.getElementById("icon-add-btn").onclick = ()=> document.getElementById("icon-file-input").click();
+document.getElementById("icon-file-input").onchange = e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  e.target.value = "";
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    compressAndAddIcon(ev.target.result, thumb=>{
+      if(iconPickerTarget){
+        const person = chat.persons[iconPickerTarget];
+        const img = new Image();
+        img.onload = ()=>{ person.img = img; person.imgSrc = thumb; buildPersons(); render(); };
+        img.src = thumb;
+      }
+      buildIconPickerUI();
+    });
+  };
+  reader.readAsDataURL(f);
+};
 
 /* ================= テンプレート ================= */
 const TMPL_KEY = "kyocho_templates";
