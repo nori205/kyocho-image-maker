@@ -209,6 +209,24 @@
     font-size:9px;font-weight:800;padding:1px 5px;
   }
 
+  /* ===== アイコン履歴 ===== */
+  .icon-hist-wrap{display:flex;gap:8px;flex-wrap:wrap;flex:1;min-width:0;padding:2px 0}
+  .icon-hist-item{position:relative;width:40px;height:40px;flex-shrink:0}
+  .icon-hist-thumb{
+    width:40px;height:40px;border-radius:50%;object-fit:cover;display:block;
+    border:2.5px solid var(--line);cursor:pointer;transition:border-color .12s;
+  }
+  .icon-hist-thumb:hover{border-color:var(--ink)}
+  .icon-hist-thumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+  .icon-hist-del{
+    display:none;position:absolute;top:-4px;right:-4px;
+    width:17px;height:17px;border-radius:50%;
+    background:rgba(0,0,0,.5);color:#fff;border:none;
+    font-size:9px;cursor:pointer;padding:0;line-height:17px;text-align:center;
+  }
+  .icon-hist-item:hover .icon-hist-del{display:block}
+  .icon-hist-del:hover{background:rgba(200,50,50,.85)}
+
   /* ===== iro.js カラーピッカー ポップアップ ===== */
   #iro-overlay{
     display:none;position:fixed;inset:0;z-index:999;
@@ -656,7 +674,7 @@ function renderChat(){
     const left = r.m.side === "L";
     const ax = left ? pad : W - pad - av;
     // アイコン
-    if(r.p.img){
+    if(r.p.img && r.p.img.naturalWidth > 0){
       ctx.save();
       ctx.beginPath(); ctx.arc(ax+av/2, y+av/2, av/2, 0, Math.PI*2); ctx.closePath();
       ctx.clip();
@@ -1050,26 +1068,65 @@ function buildPerson(key, el, label){
     if(!f) return;
     const reader = new FileReader();
     reader.onload = ev=>{
-      const img = new Image();
-      img.onload = ()=>{ p.img = img; buildPersons(); render(); };
-      img.src = ev.target.result;
+      saveIconToHistory(ev.target.result, thumb=>{
+        const img = new Image();
+        img.onload = ()=>{ p.img = img; p.imgSrc = thumb; buildPersons(); render(); };
+        img.src = thumb;
+      });
     };
     reader.readAsDataURL(f);
   };
   imgRow.appendChild(pick);
   imgRow.appendChild(file);
-  if(p.img){
+  if(p.img && p.img.naturalWidth > 0){
     const thumb = document.createElement("img");
-    thumb.src = p.img.src;
+    thumb.src = p.imgSrc || p.img.src;
     thumb.style.cssText = "width:32px;height:32px;border-radius:50%;object-fit:cover;border:1.5px solid var(--line)";
     imgRow.appendChild(thumb);
     const back = document.createElement("button");
     back.className = "chip";
     back.textContent = "絵文字に戻す";
-    back.onclick = ()=>{ p.img = null; buildPersons(); render(); };
+    back.onclick = ()=>{ p.img = null; p.imgSrc = null; buildPersons(); render(); };
     imgRow.appendChild(back);
   }
   el.appendChild(imgRow);
+
+  const icons = getIcons();
+  if(icons.length > 0){
+    const iconHistRow = document.createElement("div");
+    iconHistRow.className = "ctrl-row";
+    iconHistRow.style.alignItems = "flex-start";
+    iconHistRow.innerHTML = '<span class="ctrl-label">履歴</span>';
+    const iconWrap = document.createElement("div");
+    iconWrap.className = "icon-hist-wrap";
+    icons.forEach((src, i)=>{
+      const item = document.createElement("div");
+      item.className = "icon-hist-item";
+      const th = document.createElement("img");
+      th.src = src;
+      th.className = "icon-hist-thumb" + (p.imgSrc === src ? " sel" : "");
+      th.title = "このアイコンを使う";
+      th.onclick = ()=>{
+        const img = new Image();
+        img.onload = ()=>{ p.img = img; p.imgSrc = src; buildPersons(); render(); };
+        img.src = src;
+      };
+      const delBtn = document.createElement("button");
+      delBtn.className = "icon-hist-del";
+      delBtn.textContent = "✕";
+      delBtn.title = "履歴から削除";
+      delBtn.onclick = e2=>{
+        e2.stopPropagation();
+        const list = getIcons(); list.splice(i,1);
+        try{ localStorage.setItem(ICON_KEY, JSON.stringify(list)); }catch(e){}
+        buildPersons();
+      };
+      item.append(th, delBtn);
+      iconWrap.appendChild(item);
+    });
+    iconHistRow.appendChild(iconWrap);
+    el.appendChild(iconHistRow);
+  }
 
   const row2 = document.createElement("div");
   row2.className = "ctrl-row";
@@ -1269,6 +1326,16 @@ function buildHistory(){
         buildBg(); buildLines(); buildTemplates();
       } else {
         Object.assign(chat, JSON.parse(JSON.stringify(item.data)));
+        // imgSrc から img を再構築（JSON.stringify で Image 要素は失われるため）
+        Object.values(chat.persons).forEach(p=>{
+          if(p.imgSrc && typeof p.imgSrc === "string"){
+            const img = new Image();
+            img.onload = ()=>{ p.img = img; render(); };
+            img.src = p.imgSrc;
+          } else {
+            p.img = null;
+          }
+        });
         setMode("chat");
         buildChatBg(); buildPersons(); buildMsgs();
       }
@@ -1279,6 +1346,28 @@ function buildHistory(){
     wrap.appendChild(card);
   });
   histEl.appendChild(wrap);
+}
+
+/* ================= アイコン履歴 ================= */
+const ICON_KEY = "kyocho_icons";
+const ICON_MAX = 20;
+function getIcons(){ try{ return JSON.parse(localStorage.getItem(ICON_KEY)||"[]"); }catch{ return []; } }
+function saveIconToHistory(dataUrl, cb){
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const cx2 = c.getContext("2d");
+  const tmp = new Image();
+  tmp.onload = ()=>{
+    const sc = Math.min(256/tmp.width, 256/tmp.height);
+    cx2.drawImage(tmp, (256-tmp.width*sc)/2, (256-tmp.height*sc)/2, tmp.width*sc, tmp.height*sc);
+    const thumb = c.toDataURL("image/jpeg", 0.82);
+    const list = getIcons();
+    list.unshift(thumb);
+    if(list.length > ICON_MAX) list.length = ICON_MAX;
+    try{ localStorage.setItem(ICON_KEY, JSON.stringify(list)); }catch(e){}
+    if(cb) cb(thumb);
+  };
+  tmp.src = dataUrl;
 }
 
 /* ================= テンプレート ================= */
