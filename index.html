@@ -227,6 +227,25 @@
   .icon-hist-item:hover .icon-hist-del{display:block}
   .icon-hist-del:hover{background:rgba(200,50,50,.85)}
 
+  /* ===== カラースウォッチ（ピッカー内） ===== */
+  #iro-swatches{margin-top:12px}
+  .sw-label{font-size:10.5px;font-weight:800;color:var(--muted);letter-spacing:.08em;margin-bottom:6px}
+  .sw-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:6px}
+  .sw-item{position:relative;width:28px;height:28px;flex-shrink:0}
+  .sw-dot{
+    width:28px;height:28px;border-radius:50%;border:2px solid var(--line);
+    cursor:pointer;padding:0;display:block;transition:transform .1s,border-color .1s;
+  }
+  .sw-dot:hover{border-color:var(--ink);transform:scale(1.1)}
+  .sw-dot.white{border-color:#C8C4BC}
+  .sw-star{
+    position:absolute;top:-4px;right:-5px;width:15px;height:15px;border-radius:50%;
+    background:var(--card);border:none;font-size:9px;cursor:pointer;
+    padding:0;line-height:15px;text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.22);
+  }
+  .sw-star:hover{transform:scale(1.2)}
+
   /* ===== iro.js カラーピッカー ポップアップ ===== */
   #iro-overlay{
     display:none;position:fixed;inset:0;z-index:999;
@@ -365,6 +384,7 @@
     <input type="text" id="iro-hex-in" maxlength="7" spellcheck="false" placeholder="#000000">
     <button id="iro-eyedrop" title="スポイト">🖊</button>
   </div>
+  <div id="iro-swatches"></div>
   <button id="iro-close">決定</button>
 </div>
 
@@ -1348,6 +1368,96 @@ function buildHistory(){
   histEl.appendChild(wrap);
 }
 
+/* ================= カラー履歴 & お気に入り ================= */
+const FAV_COLOR_KEY  = "kyocho_fav_colors";
+const HIST_COLOR_KEY = "kyocho_color_hist";
+const COLOR_HIST_MAX = 10;
+
+function getFavColors() { try{ return JSON.parse(localStorage.getItem(FAV_COLOR_KEY)||"[]"); }catch{ return []; } }
+function getColorHist() { try{ return JSON.parse(localStorage.getItem(HIST_COLOR_KEY)||"[]"); }catch{ return []; } }
+
+function addToColorHist(hex){
+  if(!hex || !/^#[0-9A-Fa-f]{6}$/.test(hex)) return;
+  const list = getColorHist().filter(c => c.toLowerCase() !== hex.toLowerCase());
+  list.unshift(hex);
+  if(list.length > COLOR_HIST_MAX) list.length = COLOR_HIST_MAX;
+  try{ localStorage.setItem(HIST_COLOR_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function toggleFavColor(hex){
+  const list = getFavColors();
+  const idx = list.findIndex(c => c.toLowerCase() === hex.toLowerCase());
+  if(idx !== -1) list.splice(idx, 1);
+  else list.unshift(hex);
+  try{ localStorage.setItem(FAV_COLOR_KEY, JSON.stringify(list)); }catch(e){}
+}
+
+function isColorFav(hex){
+  return getFavColors().some(c => c.toLowerCase() === hex.toLowerCase());
+}
+
+function buildColorSwatches(){
+  const el = document.getElementById("iro-swatches");
+  if(!el) return;
+  el.innerHTML = "";
+  const favs = getFavColors();
+  const hist = getColorHist();
+  if(favs.length === 0 && hist.length === 0) return;
+
+  function makeItem(hex){
+    const wrap = document.createElement("div");
+    wrap.className = "sw-item";
+    const dot = document.createElement("button");
+    dot.className = "sw-dot" + (hex.toUpperCase()==="#FFFFFF" ? " white" : "");
+    dot.style.background = hex;
+    dot.title = hex;
+    dot.onclick = ()=>{
+      if(!iroPicker) return;
+      iroPicker.color.hexString = hex;
+      document.getElementById("iro-hex-in").value = hex;
+      document.getElementById("iro-preview-dot").style.background = hex;
+      if(iroOnChange) iroOnChange(hex);
+      render();
+    };
+    const fav = isColorFav(hex);
+    const star = document.createElement("button");
+    star.className = "sw-star";
+    star.textContent = fav ? "★" : "☆";
+    star.style.color = fav ? "#E8B020" : "rgba(0,0,0,.28)";
+    star.title = fav ? "お気に入りから削除" : "お気に入りに追加";
+    star.onclick = e=>{
+      e.stopPropagation();
+      toggleFavColor(hex);
+      buildColorSwatches();
+    };
+    wrap.append(dot, star);
+    return wrap;
+  }
+
+  if(favs.length > 0){
+    const lbl = document.createElement("div");
+    lbl.className = "sw-label";
+    lbl.textContent = "★ お気に入り";
+    el.appendChild(lbl);
+    const row = document.createElement("div");
+    row.className = "sw-row";
+    favs.forEach(h => row.appendChild(makeItem(h)));
+    el.appendChild(row);
+  }
+
+  const histOnly = hist.filter(h => !isColorFav(h));
+  if(histOnly.length > 0){
+    const lbl = document.createElement("div");
+    lbl.className = "sw-label";
+    lbl.textContent = "履歴";
+    el.appendChild(lbl);
+    const row = document.createElement("div");
+    row.className = "sw-row";
+    histOnly.forEach(h => row.appendChild(makeItem(h)));
+    el.appendChild(row);
+  }
+}
+
 /* ================= アイコン履歴 ================= */
 const ICON_KEY = "kyocho_icons";
 const ICON_MAX = 20;
@@ -1466,6 +1576,7 @@ function openIroPicker(currentColor, onChange, title, onClose){
   document.getElementById("iro-popup-title").textContent = title || "色を選ぶ";
   document.getElementById("iro-overlay").classList.add("open");
   document.getElementById("iro-popup").classList.add("open");
+  buildColorSwatches();
 }
 
 function closeIroPicker(){
@@ -1475,7 +1586,10 @@ function closeIroPicker(){
   iroOnChange = null;
 }
 document.getElementById("iro-overlay").onclick = closeIroPicker;
-document.getElementById("iro-close").onclick = closeIroPicker;
+document.getElementById("iro-close").onclick = ()=>{
+  if(iroPicker) addToColorHist(iroPicker.color.hexString);
+  closeIroPicker();
+};
 
 /* ================= 初期化 ================= */
 buildSizes(); buildBg(); buildDir(); buildLines();
