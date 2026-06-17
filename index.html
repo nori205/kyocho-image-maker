@@ -515,12 +515,13 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
   const scale = chars.length * drawSize * 1.15 > maxH ? maxH / (chars.length * drawSize * 1.15) : 1;
   const ds = Math.floor(drawSize * scale);
   const charH = ds * 1.15;
-  const startY = (l.valign === "top" ? s.h * 0.05 : (s.h - chars.length * charH) / 2) + (l.margin || 0);
+  const startY = (l.valign === "top" ? s.h * 0.05 : (s.h - chars.length * charH) / 2);
+  const xAdj = x - (l.margin || 0);
   ctx.font = fontStr(l, ds);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   chars.forEach((ch,i)=>{
-    let cx=x, cy=startY+i*charH;
+    let cx=xAdj, cy=startY+i*charH;
     if('。．'.includes(ch)){cx+=ds*0.3;cy-=ds*0.1;}
     else if('、，'.includes(ch)){cx+=ds*0.3;}
     if(l.textBg){
