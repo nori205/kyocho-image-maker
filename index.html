@@ -608,7 +608,7 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
     if('。．'.includes(ch)){cx+=ds*0.3;cy-=ds*0.1;}
     else if('、，'.includes(ch)){cx+=ds*0.3;}
     if(l.textBg){
-      const bpx=Math.round(ds*0.1);
+      const bpx=Math.round(ds*0.2);
       const rad=(l.textBgRadius??10)*ds/100;
       ctx.save();ctx.globalAlpha=l.textBgOpacity??1;ctx.fillStyle=l.textBg;
       ctx.beginPath();ctx.roundRect(cx-ds/2-bpx,cy-bpx,ds+bpx*2,ds+bpx*2,rad);
@@ -708,8 +708,8 @@ function renderEmph(){
 
       if(l.textBg){
         const tw = ctx.measureText(l.text).width;
-        const bpx = Math.round(l.drawSize * 0.15);
-        const bpy = Math.round(l.drawSize * 0.1);
+        const bpx = Math.round(l.drawSize * 0.28);
+        const bpy = Math.round(l.drawSize * 0.2);
         const bx2 = align === "left" ? s.w*0.05 - bpx
                   : align === "right" ? s.w*0.95 - tw - bpx
                   : (s.w - tw)/2 - bpx;
