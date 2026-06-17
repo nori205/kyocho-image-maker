@@ -154,12 +154,11 @@
   .msg-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 
   .backup-row{
-    display:flex;gap:8px;margin-top:24px;padding-top:14px;
-    border-top:1px solid var(--line);
+    display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px;
   }
   .backup-btn{
-    flex:1;border:1.5px solid var(--line);background:var(--card);
-    border-radius:10px;padding:10px 6px;font-size:12.5px;font-weight:700;
+    border:1.5px solid var(--line);background:var(--card);
+    border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;
     color:var(--muted);cursor:pointer;font-family:inherit;
   }
   .backup-btn:hover{border-color:var(--ink);color:var(--ink)}
@@ -407,6 +406,11 @@
   <!-- 入力エリア -->
   <div class="controls">
     <div id="history"></div>
+    <div class="backup-row">
+      <button class="backup-btn" id="btnBackup">💾 バックアップ</button>
+      <button class="backup-btn" id="btnRestore">📂 復元</button>
+      <input type="file" id="restoreFile" accept=".json" style="display:none">
+    </div>
     <div class="tabs">
       <button class="tab active" id="tabEmph">✏️ 文字強調</button>
       <button class="tab" id="tabChat">💬 会話</button>
@@ -450,12 +454,6 @@
       <div class="sec">会話</div>
       <div id="msgs"></div>
       <button class="add-line" id="addMsg">＋ セリフを追加</button>
-    </div>
-
-    <div class="backup-row">
-      <button class="backup-btn" id="btnBackup">💾 バックアップ</button>
-      <button class="backup-btn" id="btnRestore">📂 復元</button>
-      <input type="file" id="restoreFile" accept=".json" style="display:none">
     </div>
 
     <div class="save-bar">
