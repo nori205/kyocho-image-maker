@@ -483,6 +483,19 @@
   <button id="iro-close">決定</button>
 </div>
 
+<!-- パスワードモーダル -->
+<div id="pw-overlay" style="display:none">
+  <div id="pw-modal">
+    <div id="pw-title">🔑 パスワードを入力してください</div>
+    <input type="password" id="pw-input" placeholder="購入後に受け取ったパスワード">
+    <div id="pw-error" style="display:none">パスワードが違います</div>
+    <div class="pw-buttons">
+      <button id="pw-cancel">キャンセル</button>
+      <button id="pw-ok">解除する</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ================= ロック機能 ================= */
 const PW_HASH = "2d022615577ac3c4513dcd0e434af038400f2477e1ad3440e6af36aaee117556";
@@ -1867,19 +1880,5 @@ if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(render);
 }
 </script>
-
-<!-- パスワードモーダル -->
-<div id="pw-overlay" style="display:none">
-  <div id="pw-modal">
-    <div id="pw-title">🔑 パスワードを入力してください</div>
-    <input type="password" id="pw-input" placeholder="購入後に受け取ったパスワード">
-    <div id="pw-error" style="display:none">パスワードが違います</div>
-    <div class="pw-buttons">
-      <button id="pw-cancel">キャンセル</button>
-      <button id="pw-ok">解除する</button>
-    </div>
-  </div>
-</div>
-
 </body>
 </html>
