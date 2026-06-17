@@ -594,23 +594,23 @@ function renderEmph(){
     return;
   }
 
-  const lines = [];
+  const drawn = [];
   state.lines.forEach(l=>{
     if(l.vertical) return;
-    l.text.split("\n").forEach(t=>{
-      if(t.trim() !== "") lines.push(Object.assign({}, l, {text:t}));
+    const subTexts = l.text.split("\n").filter(t => t.trim() !== "");
+    if(subTexts.length === 0) return;
+    const max = s.w * 0.9;
+    let minSize = l.size;
+    subTexts.forEach(t=>{
+      ctx.font = fontStr(l, l.size);
+      const w = ctx.measureText(t).width;
+      if(w > max) minSize = Math.min(minSize, Math.floor(l.size * max / w));
     });
+    subTexts.forEach(t=> drawn.push(Object.assign({}, l, {text:t, drawSize:minSize})));
   });
 
-  if(lines.length > 0){
+  if(drawn.length > 0){
     const GAP = 0.45;
-    const drawn = lines.map(l=>{
-      ctx.font = fontStr(l, l.size);
-      const w = ctx.measureText(l.text).width;
-      const max = s.w * 0.9;
-      const size = w > max ? Math.floor(l.size * max / w) : l.size;
-      return Object.assign({}, l, {drawSize:size});
-    });
     const totalH = drawn.reduce((sum,l,i)=> sum + l.drawSize + (i>0 ? l.drawSize*GAP : 0), 0);
     let y = (s.h - totalH)/2;
     ctx.textBaseline = "top";
