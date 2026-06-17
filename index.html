@@ -343,6 +343,29 @@
     .pc-save{display:block}
   }
 </style>
+<style>
+/* ===== ロックバナー ===== */
+#lock-banner{background:linear-gradient(135deg,#1F2328 0%,#2d3339 100%);color:#fff;padding:14px 16px}
+.lock-banner-inner{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.lock-info{display:flex;align-items:flex-start;gap:10px}
+.lock-icon{font-size:20px;flex-shrink:0;margin-top:2px}
+.lock-title{font-size:13px;font-weight:800;margin-bottom:4px}
+.lock-desc{font-size:11px;color:rgba(255,255,255,.7);line-height:1.5}
+.lock-buttons{display:flex;gap:8px}
+.lock-note-btn{flex:1;background:#E8442E;color:#fff;border:none;border-radius:8px;padding:9px 12px;font-size:13px;font-weight:800;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit;display:block;line-height:1.4}
+.lock-pw-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+/* ===== パスワードモーダル ===== */
+#pw-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center}
+#pw-modal{background:var(--card);border-radius:16px;padding:24px;width:min(340px,90vw);display:flex;flex-direction:column;gap:14px}
+#pw-title{font-size:15px;font-weight:800}
+#pw-input{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:16px;font-family:inherit;width:100%;outline:none}
+#pw-input:focus{border-color:var(--accent)}
+#pw-error{font-size:12px;color:var(--accent);font-weight:700}
+.pw-buttons{display:flex;gap:8px;justify-content:flex-end}
+.pw-buttons button{padding:8px 18px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+#pw-cancel{background:var(--line);color:var(--ink)}
+#pw-ok{background:var(--accent);color:#fff}
+</style>
 </head>
 <body>
 
@@ -350,6 +373,22 @@
   <h1>強調文字画像メーカー</h1>
   <span>文字を打って保存するだけ・v1.1</span>
 </header>
+
+<div id="lock-banner">
+  <div class="lock-banner-inner">
+    <div class="lock-info">
+      <span class="lock-icon">🔒</span>
+      <div>
+        <div class="lock-title">有料機能がロックされています</div>
+        <div class="lock-desc">フォント全12種・背景透過・カラーピッカー・縁/影効果・縦書き・テンプレート・会話モードなど</div>
+      </div>
+    </div>
+    <div class="lock-buttons">
+      <a class="lock-note-btn" href="https://note.com/" target="_blank" id="note-link">noteで購入する ↗</a>
+      <button class="lock-pw-btn" id="unlock-btn">🔑 解除する</button>
+    </div>
+  </div>
+</div>
 
 <div class="wrap layout">
 
@@ -376,11 +415,11 @@
       <div class="sec">背景色</div>
       <div class="dots" id="bgDots"></div>
       <div id="bgOpacityRow"></div>
-      <div class="sec">テンプレート</div>
+      <div class="sec" id="tmplSec">テンプレート</div>
       <div class="tmpl-wrap" id="templates"></div>
       <button class="tmpl-save" id="saveTemplate" style="margin-top:8px">＋ 現在の設定を保存</button>
 
-      <div class="sec" style="margin-top:16px">書き方向</div>
+      <div class="sec" id="dirSec" style="margin-top:16px">書き方向</div>
       <div id="dirRow"></div>
 
       <div class="sec">テキスト（行ごとに書体・色・サイズを変えられます）</div>
@@ -445,13 +484,50 @@
 </div>
 
 <script>
+/* ================= ロック機能 ================= */
+const PW_HASH = "2d022615577ac3c4513dcd0e434af038400f2477e1ad3440e6af36aaee117556";
+const UNLOCK_KEY = "kyocho_unlocked";
+const UNLOCKED = localStorage.getItem(UNLOCK_KEY) === "1";
+
+async function sha256(str){
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+if(UNLOCKED){
+  document.getElementById("lock-banner").style.display = "none";
+}
+
+document.getElementById("unlock-btn").onclick = ()=>{
+  document.getElementById("pw-overlay").style.display = "flex";
+  document.getElementById("pw-input").value = "";
+  document.getElementById("pw-error").style.display = "none";
+  setTimeout(()=>document.getElementById("pw-input").focus(), 100);
+};
+document.getElementById("pw-cancel").onclick = ()=>{
+  document.getElementById("pw-overlay").style.display = "none";
+};
+document.getElementById("pw-ok").onclick = async ()=>{
+  const hash = await sha256(document.getElementById("pw-input").value);
+  if(hash === PW_HASH){
+    localStorage.setItem(UNLOCK_KEY, "1");
+    location.reload();
+  } else {
+    document.getElementById("pw-error").style.display = "block";
+    document.getElementById("pw-input").select();
+  }
+};
+document.getElementById("pw-input").onkeydown = e=>{
+  if(e.key === "Enter") document.getElementById("pw-ok").click();
+};
+
 /* ================= 共通 ================= */
 const FONTS = [
-  {label:"ゴシック",     family:'"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif', hasBold:true},
-  {label:"極太ポップ",   family:'"Dela Gothic One",sans-serif',            hasBold:false},
+  {label:"ゴシック",     family:'"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",sans-serif', hasBold:true,  free:true},
+  {label:"極太ポップ",   family:'"Dela Gothic One",sans-serif',            hasBold:false, free:true},
   {label:"ZEN丸Black",  family:'"Zen Maru Gothic",sans-serif',            hasBold:false, weight:"900"},
   {label:"ZEN角ゴシック",family:'"Zen Kaku Gothic New",sans-serif',        hasBold:true},
-  {label:"明朝",         family:'"Zen Old Mincho","Hiragino Mincho ProN",serif', hasBold:true},
+  {label:"明朝",         family:'"Zen Old Mincho","Hiragino Mincho ProN",serif', hasBold:true, free:true},
   {label:"アンチック",   family:'"Shippori Antique B1",serif',             hasBold:false},
   {label:"キウイ丸",     family:'"Kiwi Maru",serif',                       hasBold:false, weight:"300"},
   {label:"デコール",     family:'"Kaisei Decol",serif',                    hasBold:true},
@@ -863,6 +939,7 @@ function buildDots(el, colors, get, set, withCustom){
 function buildDir(){
   const el = document.getElementById("dirRow");
   el.innerHTML = "";
+  if(!UNLOCKED){ el.style.display="none"; return; }
   el.style.cssText = "display:flex;gap:8px;margin-bottom:4px";
   const isV = state.lines.some(l=>l.vertical);
   [["横書き",false],["縦書き",true]].forEach(([label,v])=>{
@@ -878,6 +955,7 @@ const bgDots = document.getElementById("bgDots");
 const bgOpacityEl = document.getElementById("bgOpacityRow");
 function buildBgOpacity(){
   bgOpacityEl.innerHTML = "";
+  if(!UNLOCKED) return;
   if(state.bg === "transparent") return;
   const row = document.createElement("div");
   row.className = "ctrl-row";
@@ -891,7 +969,7 @@ function buildBgOpacity(){
   bgOpacityEl.appendChild(row);
 }
 function buildBg(){
-  buildDots(bgDots, BG_COLORS, ()=>state.bg, v=>{ state.bg=v; buildBgOpacity(); render(); }, true);
+  buildDots(bgDots, BG_COLORS, ()=>state.bg, v=>{ state.bg=v; buildBgOpacity(); render(); }, UNLOCKED);
   buildBgOpacity();
 }
 
@@ -914,6 +992,7 @@ function buildLines(){
     const fwrap = document.createElement("div");
     fwrap.className = "size-row";
     FONTS.forEach((f,fi)=>{
+      if(!UNLOCKED && !f.free) return;
       const b = document.createElement("button");
       b.className = "chip" + ((l.font??0)===fi?" active":"");
       b.textContent = f.label;
@@ -942,7 +1021,7 @@ function buildLines(){
     dwrap.className = "dots";
     row2.appendChild(dwrap);
     card.appendChild(row2);
-    buildDots(dwrap, TEXT_COLORS, ()=>l.color, v=>l.color=v, true);
+    buildDots(dwrap, TEXT_COLORS, ()=>l.color, v=>l.color=v, UNLOCKED);
 
     const rowM = document.createElement("div");
     rowM.className = "ctrl-row";
@@ -957,6 +1036,7 @@ function buildLines(){
 
     const rowFx = document.createElement("div");
     rowFx.className = "ctrl-row";
+    if(!UNLOCKED){ rowFx.style.display="none"; }
     rowFx.innerHTML = '<span class="ctrl-label">効果</span>';
     const fxwrap = document.createElement("div");
     fxwrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
@@ -985,7 +1065,7 @@ function buildLines(){
     // 線の太さスライダー（縁あり・中抜き時のみ表示）
     const rowSW = document.createElement("div");
     rowSW.className = "ctrl-row";
-    rowSW.style.display = (l.stroke && l.stroke !== "none") ? "flex" : "none";
+    rowSW.style.display = (UNLOCKED && l.stroke && l.stroke !== "none") ? "flex" : "none";
     rowSW.innerHTML = '<span class="ctrl-label">線の太さ</span>';
     const swRng = document.createElement("input");
     swRng.type = "range"; swRng.min = 1; swRng.max = 20; swRng.value = l.strokeWidth || 6;
@@ -997,6 +1077,7 @@ function buildLines(){
 
     const rowTB = document.createElement("div");
     rowTB.className = "ctrl-row";
+    if(!UNLOCKED){ rowTB.style.display="none"; }
     rowTB.innerHTML = '<span class="ctrl-label">文字背景</span>';
     const tbWrap = document.createElement("div");
     tbWrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
@@ -1767,6 +1848,17 @@ document.getElementById("restoreFile").onchange = e=>{
 };
 
 /* ================= 初期化 ================= */
+// ロック時：会話タブ・テンプレート・履歴・バックアップを非表示
+if(!UNLOCKED){
+  document.getElementById("tabChat").style.display = "none";
+  document.getElementById("tmplSec").style.display = "none";
+  document.getElementById("templates").style.display = "none";
+  document.getElementById("saveTemplate").style.display = "none";
+  document.getElementById("dirSec").style.display = "none";
+  document.getElementById("history").style.display = "none";
+  document.querySelector(".backup-row").style.display = "none";
+}
+
 buildSizes(); buildBg(); buildDir(); buildLines();
 buildChatBg(); buildPersons(); buildMsgs();
 buildTemplates(); buildHistory();
@@ -1775,5 +1867,19 @@ if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(render);
 }
 </script>
+
+<!-- パスワードモーダル -->
+<div id="pw-overlay" style="display:none">
+  <div id="pw-modal">
+    <div id="pw-title">🔑 パスワードを入力してください</div>
+    <input type="password" id="pw-input" placeholder="購入後に受け取ったパスワード">
+    <div id="pw-error" style="display:none">パスワードが違います</div>
+    <div class="pw-buttons">
+      <button id="pw-cancel">キャンセル</button>
+      <button id="pw-ok">解除する</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
