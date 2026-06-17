@@ -1000,7 +1000,13 @@ function buildLines(){
       b.className = "chip" + ((l.font??0)===fi?" active":"");
       b.textContent = f.label;
       b.style.fontFamily = f.family;
-      b.onclick = ()=>{ l.font=fi; buildLines(); render(); };
+      b.onclick = ()=>{
+        l.font=fi; buildLines(); render();
+        const fs = fontStr(l, l.size);
+        if(!document.fonts.check(fs)){
+          document.fonts.load(fs).then(()=>render()).catch(()=>{});
+        }
+      };
       fwrap.appendChild(b);
     });
     rowF.appendChild(fwrap);
