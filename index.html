@@ -465,7 +465,10 @@
       <div class="sec" id="dirSec" style="margin-top:16px">書き方向</div>
       <div id="dirRow"></div>
 
-      <div class="sec">テキスト（行ごとに書体・色・サイズを変えられます）</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px">
+        <div class="sec" style="margin:0">テキスト（行ごとに書体・色・サイズを変えられます）</div>
+        <button id="clearLines" style="font-size:11px;font-weight:800;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;font-family:inherit;letter-spacing:.04em">全クリア</button>
+      </div>
       <div id="lines"></div>
       <button class="add-line" id="addLine">＋ 行を追加</button>
     </div>
@@ -1227,6 +1230,12 @@ function buildLines(){
 function mkBtn(t,fn){ const b=document.createElement("button"); b.textContent=t; b.onclick=fn; return b; }
 function mkDel(fn){ const b=mkBtn("✕",fn); b.classList.add("del"); return b; }
 function swapArr(arr,a,b,rebuild){ const t=arr[a]; arr[a]=arr[b]; arr[b]=t; rebuild(); render(); }
+
+document.getElementById("clearLines").onclick = ()=>{
+  state.lines.forEach(l => { l.text = ""; });
+  buildLines(); render();
+  linesEl.querySelectorAll("textarea")[0]?.focus();
+};
 
 document.getElementById("addLine").onclick = ()=>{
   state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"});
