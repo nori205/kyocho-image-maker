@@ -326,6 +326,40 @@
     border-radius:8px;cursor:pointer;font-size:15px;padding:0;flex-shrink:0;
   }
 
+  /* ===== フォントピッカー ポップアップ ===== */
+  #font-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.3)}
+  #font-overlay.open{display:block}
+  #font-popup{
+    display:none;position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);z-index:1000;
+    background:var(--paper);border-radius:18px;padding:16px;
+    box-shadow:0 8px 40px rgba(0,0,0,.22);
+    width:min(340px,90vw);max-height:72vh;overflow-y:auto;
+  }
+  #font-popup.open{display:block}
+  #font-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  #font-popup-title{font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.08em}
+  #font-popup-close{border:none;background:none;font-size:18px;cursor:pointer;color:var(--muted);padding:2px 4px;line-height:1}
+  .font-pick-item{
+    display:flex;align-items:center;gap:12px;
+    padding:9px 12px;border-radius:10px;cursor:pointer;
+    border:2px solid transparent;margin-bottom:5px;
+    background:var(--card);transition:border-color .12s;
+  }
+  .font-pick-item:hover{border-color:var(--line)}
+  .font-pick-item.sel{border-color:var(--accent)}
+  .font-pick-name{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.06em;width:82px;flex-shrink:0;line-height:1.3}
+  .font-pick-sample{font-size:20px;line-height:1.3;color:var(--ink);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .font-open-btn{
+    display:flex;align-items:center;justify-content:space-between;gap:6px;
+    padding:7px 10px;border-radius:10px;flex:1;min-width:0;
+    background:var(--card);border:1.5px solid var(--line);
+    font-size:13px;font-weight:700;color:var(--ink);
+    cursor:pointer;font-family:inherit;
+  }
+  .font-open-btn-label{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1;min-width:0;text-align:left}
+  .font-open-btn-arrow{font-size:9px;color:var(--muted);flex-shrink:0}
+
   /* ===== パソコン：左に入力・右にプレビューの2列 ===== */
   @media (min-width: 900px){
     .wrap{max-width:1040px}
@@ -460,6 +494,15 @@
       <button id="save">画像を保存（PNG）</button>
     </div>
   </div>
+</div>
+
+<div id="font-overlay"></div>
+<div id="font-popup">
+  <div id="font-popup-head">
+    <span id="font-popup-title">書体を選ぶ</span>
+    <button id="font-popup-close">✕</button>
+  </div>
+  <div id="font-popup-list"></div>
 </div>
 
 <div id="icon-overlay"></div>
@@ -991,23 +1034,21 @@ function buildLines(){
     const rowF = document.createElement("div");
     rowF.className = "ctrl-row";
     rowF.innerHTML = '<span class="ctrl-label">書体</span>';
-    const fwrap = document.createElement("div");
-    fwrap.className = "size-row";
-    FONTS.forEach((f,fi)=>{
-      const b = document.createElement("button");
-      b.className = "chip" + ((l.font??0)===fi?" active":"");
-      b.textContent = f.label;
-      b.style.fontFamily = f.family;
-      b.onclick = ()=>{
-        l.font=fi; buildLines(); render();
+    const fb = document.createElement("button");
+    fb.className = "font-open-btn";
+    const curFont = FONTS[l.font ?? 0];
+    fb.innerHTML = `<span class="font-open-btn-label" style="font-family:${curFont.family}">${curFont.label}</span><span class="font-open-btn-arrow">▼</span>`;
+    fb.onclick = ()=>{
+      openFontPicker(l.font ?? 0, fi=>{
+        l.font = fi;
         const fs = fontStr(l, l.size);
         if(!document.fonts.check(fs)){
           document.fonts.load(fs).then(()=>render()).catch(()=>{});
         }
-      };
-      fwrap.appendChild(b);
-    });
-    rowF.appendChild(fwrap);
+        buildLines(); render();
+      });
+    };
+    rowF.appendChild(fb);
     card.appendChild(rowF);
 
     const row1 = document.createElement("div");
@@ -1660,6 +1701,36 @@ function buildIconPickerUI(){
     el.appendChild(empty);
   }
 }
+
+let _fontPickCallback = null;
+function openFontPicker(currentIdx, onSelect){
+  _fontPickCallback = onSelect;
+  const list = document.getElementById("font-popup-list");
+  list.innerHTML = "";
+  FONTS.forEach((f, fi)=>{
+    const item = document.createElement("div");
+    item.className = "font-pick-item" + (fi === currentIdx ? " sel" : "");
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "font-pick-name";
+    nameSpan.textContent = f.label;
+    const sampleSpan = document.createElement("span");
+    sampleSpan.className = "font-pick-sample";
+    sampleSpan.style.fontFamily = f.family;
+    sampleSpan.textContent = "あいうえお ABC";
+    item.appendChild(nameSpan);
+    item.appendChild(sampleSpan);
+    item.onclick = ()=>{ _fontPickCallback(fi); closeFontPicker(); };
+    list.appendChild(item);
+  });
+  document.getElementById("font-overlay").classList.add("open");
+  document.getElementById("font-popup").classList.add("open");
+}
+function closeFontPicker(){
+  document.getElementById("font-overlay").classList.remove("open");
+  document.getElementById("font-popup").classList.remove("open");
+}
+document.getElementById("font-overlay").onclick = closeFontPicker;
+document.getElementById("font-popup-close").onclick = closeFontPicker;
 
 function openIconPicker(key){
   iconPickerTarget = key;
