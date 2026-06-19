@@ -1077,171 +1077,210 @@ function buildLines(){
     row1.appendChild(rng); row1.appendChild(val);
     card.appendChild(row1);
 
-    // 詳細設定トグル
+    // 詳細設定トグル＋セクション（常にDOMに存在、表示のみ切り替え）
     const detailToggle = document.createElement("button");
     detailToggle.className = "detail-toggle";
     const isOpen = !!l._detailOpen;
-    detailToggle.innerHTML = `<span>文字色・効果・揃えなど</span><span>${isOpen?"▲":"▼"}</span>`;
-    detailToggle.onclick = ()=>{ l._detailOpen = !l._detailOpen; buildLines(); };
+    const toggleArrow = document.createElement("span");
+    toggleArrow.textContent = isOpen ? "▲" : "▼";
+    detailToggle.append(Object.assign(document.createElement("span"),{textContent:"文字色・効果・揃えなど"}), toggleArrow);
     card.appendChild(detailToggle);
 
-    if(isOpen){
-      const det = document.createElement("div");
-      det.className = "detail-section";
+    const det = document.createElement("div");
+    det.className = "detail-section";
+    det.style.display = isOpen ? "block" : "none";
 
-      const row2 = document.createElement("div");
-      row2.className = "ctrl-row";
-      row2.innerHTML = '<span class="ctrl-label">文字色</span>';
-      const dwrap = document.createElement("div");
-      dwrap.className = "dots";
-      row2.appendChild(dwrap);
-      det.appendChild(row2);
-      buildDots(dwrap, TEXT_COLORS, ()=>l.color, v=>l.color=v, true);
+    // トグルはDOM再構築なしで表示切替のみ
+    detailToggle.onclick = ()=>{
+      l._detailOpen = !l._detailOpen;
+      det.style.display = l._detailOpen ? "block" : "none";
+      toggleArrow.textContent = l._detailOpen ? "▲" : "▼";
+    };
 
-      const rowM = document.createElement("div");
-      rowM.className = "ctrl-row";
-      rowM.innerHTML = '<span class="ctrl-label">前の余白</span>';
-      const mrng = document.createElement("input");
-      mrng.type="range"; mrng.min=0; mrng.max=300; mrng.value=l.margin||0;
-      const mval = document.createElement("span");
-      mval.className="size-val"; mval.textContent=(l.margin||0)+"px";
-      mrng.oninput = e=>{ l.margin=+e.target.value; mval.textContent=l.margin+"px"; render(); };
-      rowM.appendChild(mrng); rowM.appendChild(mval);
-      det.appendChild(rowM);
+    // 文字色
+    const row2 = document.createElement("div");
+    row2.className = "ctrl-row";
+    row2.innerHTML = '<span class="ctrl-label">文字色</span>';
+    const dwrap = document.createElement("div");
+    dwrap.className = "dots";
+    row2.appendChild(dwrap);
+    det.appendChild(row2);
+    buildDots(dwrap, TEXT_COLORS, ()=>l.color, v=>{ l.color=v; render(); }, true);
 
-      const rowFx = document.createElement("div");
-      rowFx.className = "ctrl-row";
-      rowFx.innerHTML = '<span class="ctrl-label">効果</span>';
-      const fxwrap = document.createElement("div");
-      fxwrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
-      [["none","なし"],["stroke","縁あり"],["hollow","中抜き"]].forEach(([val,label])=>{
-        const b = document.createElement("button");
-        b.className = "chip" + ((l.stroke||"none")===val?" active":"");
-        b.textContent = label;
-        b.onclick = ()=>{ l.stroke=val; buildLines(); render(); };
-        fxwrap.appendChild(b);
+    // 前の余白
+    const rowM = document.createElement("div");
+    rowM.className = "ctrl-row";
+    rowM.innerHTML = '<span class="ctrl-label">前の余白</span>';
+    const mrng = document.createElement("input");
+    mrng.type="range"; mrng.min=0; mrng.max=300; mrng.value=l.margin||0;
+    const mval = document.createElement("span");
+    mval.className="size-val"; mval.textContent=(l.margin||0)+"px";
+    mrng.oninput = e=>{ l.margin=+e.target.value; mval.textContent=l.margin+"px"; render(); };
+    rowM.appendChild(mrng); rowM.appendChild(mval);
+    det.appendChild(rowM);
+
+    // 効果（縁・影）
+    const rowFx = document.createElement("div");
+    rowFx.className = "ctrl-row";
+    rowFx.innerHTML = '<span class="ctrl-label">効果</span>';
+    const fxwrap = document.createElement("div");
+    fxwrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+    const strokeBtns = [];
+    [["none","なし"],["stroke","縁あり"],["hollow","中抜き"]].forEach(([sv,label])=>{
+      const b = document.createElement("button");
+      b.className = "chip" + ((l.stroke||"none")===sv?" active":"");
+      b.textContent = label;
+      b.onclick = ()=>{
+        l.stroke=sv;
+        strokeBtns.forEach(([bb,bv])=>{ bb.className="chip"+(bv===sv?" active":""); });
+        swatch.style.display = sv !== "none" ? "inline-block" : "none";
+        rowSW.style.display  = sv !== "none" ? "flex" : "none";
+        render();
+      };
+      strokeBtns.push([b,sv]);
+      fxwrap.appendChild(b);
+    });
+    const swatch = document.createElement("button");
+    swatch.className = "stroke-swatch";
+    swatch.style.background = l.strokeColor || "#000000";
+    swatch.title = "縁の色を選ぶ";
+    swatch.style.display = (l.stroke && l.stroke !== "none") ? "inline-block" : "none";
+    swatch.onclick = ()=> openIroPicker(l.strokeColor||"#000000", hex=>{ l.strokeColor=hex; swatch.style.background=hex; render(); }, "縁の色を選ぶ");
+    fxwrap.appendChild(swatch);
+    const shadowBtn = document.createElement("button");
+    shadowBtn.className = "chip" + (l.shadow?" active":"");
+    shadowBtn.textContent = "影";
+    shadowBtn.onclick = ()=>{ l.shadow=!l.shadow; shadowBtn.className="chip"+(l.shadow?" active":""); render(); };
+    fxwrap.appendChild(shadowBtn);
+    rowFx.appendChild(fxwrap);
+    det.appendChild(rowFx);
+
+    // 線の太さ
+    const rowSW = document.createElement("div");
+    rowSW.className = "ctrl-row";
+    rowSW.style.display = (l.stroke && l.stroke !== "none") ? "flex" : "none";
+    rowSW.innerHTML = '<span class="ctrl-label">線の太さ</span>';
+    const swRng = document.createElement("input");
+    swRng.type="range"; swRng.min=1; swRng.max=20; swRng.value=l.strokeWidth||6;
+    const swVal = document.createElement("span");
+    swVal.className="size-val"; swVal.textContent=(l.strokeWidth||6);
+    swRng.oninput = e=>{ l.strokeWidth=+e.target.value; swVal.textContent=l.strokeWidth; render(); };
+    rowSW.appendChild(swRng); rowSW.appendChild(swVal);
+    det.appendChild(rowSW);
+
+    // 文字背景
+    const rowTBO = document.createElement("div");
+    rowTBO.className = "ctrl-row";
+    rowTBO.style.display = l.textBg ? "flex" : "none";
+    rowTBO.innerHTML = '<span class="ctrl-label">透明度</span>';
+    const tboRng = document.createElement("input");
+    tboRng.type="range"; tboRng.min=0; tboRng.max=100; tboRng.value=Math.round((l.textBgOpacity??1)*100);
+    const tboVal = document.createElement("span");
+    tboVal.className="size-val"; tboVal.textContent=Math.round((l.textBgOpacity??1)*100)+"%";
+    tboRng.oninput = e=>{ l.textBgOpacity=+e.target.value/100; tboVal.textContent=e.target.value+"%"; render(); };
+    rowTBO.appendChild(tboRng); rowTBO.appendChild(tboVal);
+
+    const rowTBR = document.createElement("div");
+    rowTBR.className = "ctrl-row";
+    rowTBR.style.display = l.textBg ? "flex" : "none";
+    rowTBR.innerHTML = '<span class="ctrl-label">角丸</span>';
+    const tbrRng = document.createElement("input");
+    tbrRng.type="range"; tbrRng.min=0; tbrRng.max=50; tbrRng.value=l.textBgRadius??10;
+    const tbrVal = document.createElement("span");
+    tbrVal.className="size-val"; tbrVal.textContent=l.textBgRadius??10;
+    tbrRng.oninput = e=>{ l.textBgRadius=+e.target.value; tbrVal.textContent=e.target.value; render(); };
+    rowTBR.appendChild(tbrRng); rowTBR.appendChild(tbrVal);
+
+    const rowTB = document.createElement("div");
+    rowTB.className = "ctrl-row";
+    rowTB.innerHTML = '<span class="ctrl-label">文字背景</span>';
+    const tbWrap = document.createElement("div");
+    tbWrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
+    const tbBtns = [];
+    const setTbBg = v=>{
+      l.textBg=v;
+      tbBtns.forEach(([el,bv,isDot])=>{
+        if(isDot) el.className="dot"+(bv==="#FFFFFF"?" white-dot":"")+(bv===v?" sel":"");
+        else el.className="chip"+(!v?" active":"");
       });
-      const swatch = document.createElement("button");
-      swatch.className = "stroke-swatch";
-      swatch.style.background = l.strokeColor || "#000000";
-      swatch.title = "縁の色を選ぶ";
-      swatch.style.display = (l.stroke && l.stroke !== "none") ? "inline-block" : "none";
-      swatch.onclick = ()=> openIroPicker(l.strokeColor||"#000000", hex=>{ l.strokeColor=hex; }, "縁の色を選ぶ", buildLines);
-      fxwrap.appendChild(swatch);
-      const shadowBtn = document.createElement("button");
-      shadowBtn.className = "chip" + (l.shadow?" active":"");
-      shadowBtn.textContent = "影";
-      shadowBtn.onclick = ()=>{ l.shadow=!l.shadow; buildLines(); render(); };
-      fxwrap.appendChild(shadowBtn);
-      rowFx.appendChild(fxwrap);
-      det.appendChild(rowFx);
+      rowTBO.style.display = v ? "flex" : "none";
+      rowTBR.style.display = v ? "flex" : "none";
+      render();
+    };
+    const noneBtn = document.createElement("button");
+    noneBtn.className = "chip" + (!l.textBg?" active":"");
+    noneBtn.textContent = "なし";
+    noneBtn.onclick = ()=> setTbBg("");
+    tbBtns.push([noneBtn,"",false]);
+    tbWrap.appendChild(noneBtn);
+    ["#FFFFFF","#1F2328"].forEach(c=>{
+      const d = document.createElement("button");
+      d.className = "dot"+(c==="#FFFFFF"?" white-dot":"")+(l.textBg===c?" sel":"");
+      d.style.background = c;
+      d.onclick = ()=> setTbBg(c);
+      tbBtns.push([d,c,true]);
+      tbWrap.appendChild(d);
+    });
+    const tbCustom = document.createElement("button");
+    tbCustom.className = "dot-custom";
+    tbCustom.onclick = ()=> openIroPicker(l.textBg||"#FFFF00", v=>{ l.textBg=v; rowTBO.style.display="flex"; rowTBR.style.display="flex"; render(); }, "文字背景色");
+    tbWrap.appendChild(tbCustom);
+    rowTB.appendChild(tbWrap);
+    det.appendChild(rowTB);
+    det.appendChild(rowTBO);
+    det.appendChild(rowTBR);
 
-      const rowSW = document.createElement("div");
-      rowSW.className = "ctrl-row";
-      rowSW.style.display = (l.stroke && l.stroke !== "none") ? "flex" : "none";
-      rowSW.innerHTML = '<span class="ctrl-label">線の太さ</span>';
-      const swRng = document.createElement("input");
-      swRng.type = "range"; swRng.min = 1; swRng.max = 20; swRng.value = l.strokeWidth || 6;
-      const swVal = document.createElement("span");
-      swVal.className = "size-val"; swVal.textContent = (l.strokeWidth || 6);
-      swRng.oninput = e => { l.strokeWidth = +e.target.value; swVal.textContent = l.strokeWidth; render(); };
-      rowSW.appendChild(swRng); rowSW.appendChild(swVal);
-      det.appendChild(rowSW);
+    // 揃え
+    const rowA = document.createElement("div");
+    rowA.className = "ctrl-row";
+    rowA.innerHTML = '<span class="ctrl-label">揃え</span>';
+    const awrap = document.createElement("div");
+    awrap.style.cssText = "display:flex;gap:6px";
+    const alignBtns = [];
+    [["left","← 左"],["center","中央"],["right","右 →"]].forEach(([av,label])=>{
+      const b = document.createElement("button");
+      b.className = "chip" + ((l.align||"center")===av?" active":"");
+      b.textContent = label;
+      b.onclick = ()=>{ l.align=av; alignBtns.forEach(([bb,bv])=>{ bb.className="chip"+(bv===av?" active":""); }); render(); };
+      alignBtns.push([b,av]);
+      awrap.appendChild(b);
+    });
+    rowA.appendChild(awrap);
+    det.appendChild(rowA);
 
-      const rowTB = document.createElement("div");
-      rowTB.className = "ctrl-row";
-      rowTB.innerHTML = '<span class="ctrl-label">文字背景</span>';
-      const tbWrap = document.createElement("div");
-      tbWrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
-      const noneBtn = document.createElement("button");
-      noneBtn.className = "chip" + (!l.textBg?" active":"");
-      noneBtn.textContent = "なし";
-      noneBtn.onclick = ()=>{ l.textBg=""; buildLines(); render(); };
-      tbWrap.appendChild(noneBtn);
-      ["#FFFFFF","#1F2328"].forEach(c=>{
-        const d = document.createElement("button");
-        d.className = "dot" + (c==="#FFFFFF"?" white-dot":"") + (l.textBg===c?" sel":"");
-        d.style.background = c;
-        d.onclick = ()=>{ l.textBg=c; buildLines(); render(); };
-        tbWrap.appendChild(d);
-      });
-      const tbCustom = document.createElement("button");
-      tbCustom.className = "dot-custom";
-      tbCustom.onclick = ()=> openIroPicker(l.textBg||"#FFFF00", v=>{ l.textBg=v; render(); }, "文字背景色", buildLines);
-      tbWrap.appendChild(tbCustom);
-      rowTB.appendChild(tbWrap);
-      det.appendChild(rowTB);
+    // 縦位置（縦書き時のみ表示）
+    const rowV = document.createElement("div");
+    rowV.className = "ctrl-row";
+    rowV.style.display = l.vertical ? "flex" : "none";
+    rowV.innerHTML = '<span class="ctrl-label">縦位置</span>';
+    const vwrap = document.createElement("div");
+    vwrap.style.cssText = "display:flex;gap:6px";
+    const valignBtns = [];
+    [["center","中央"],["top","頭揃え"]].forEach(([vv,label])=>{
+      const b = document.createElement("button");
+      b.className = "chip" + ((l.valign||"center")===vv?" active":"");
+      b.textContent = label;
+      b.onclick = ()=>{ l.valign=vv; valignBtns.forEach(([bb,bv])=>{ bb.className="chip"+(bv===vv?" active":""); }); render(); };
+      valignBtns.push([b,vv]);
+      vwrap.appendChild(b);
+    });
+    rowV.appendChild(vwrap);
+    det.appendChild(rowV);
 
-      if(l.textBg){
-        const rowTBO = document.createElement("div");
-        rowTBO.className = "ctrl-row";
-        rowTBO.innerHTML = '<span class="ctrl-label">透明度</span>';
-        const tboRng = document.createElement("input");
-        tboRng.type="range"; tboRng.min=0; tboRng.max=100; tboRng.value=Math.round((l.textBgOpacity??1)*100);
-        const tboVal = document.createElement("span");
-        tboVal.className="size-val"; tboVal.textContent=Math.round((l.textBgOpacity??1)*100)+"%";
-        tboRng.oninput = e=>{ l.textBgOpacity=+e.target.value/100; tboVal.textContent=e.target.value+"%"; render(); };
-        rowTBO.appendChild(tboRng); rowTBO.appendChild(tboVal);
-        det.appendChild(rowTBO);
+    // 太字
+    const supportsBold = FONTS[l.font??0].hasBold && !FONTS[l.font??0].weight;
+    const rowBold = document.createElement("div");
+    rowBold.className = "ctrl-row";
+    const bold = document.createElement("button");
+    bold.className = "toggle-bold" + (l.bold&&supportsBold?" on":"");
+    bold.textContent = supportsBold ? "太字" : "太字（非対応）";
+    bold.style.opacity = supportsBold ? "1" : "0.38";
+    bold.style.cursor = supportsBold ? "pointer" : "default";
+    bold.onclick = ()=>{ if(!supportsBold) return; l.bold=!l.bold; bold.className="toggle-bold"+(l.bold?" on":""); render(); };
+    rowBold.appendChild(bold);
+    det.appendChild(rowBold);
 
-        const rowTBR = document.createElement("div");
-        rowTBR.className = "ctrl-row";
-        rowTBR.innerHTML = '<span class="ctrl-label">角丸</span>';
-        const tbrRng = document.createElement("input");
-        tbrRng.type="range"; tbrRng.min=0; tbrRng.max=50; tbrRng.value=l.textBgRadius??10;
-        const tbrVal = document.createElement("span");
-        tbrVal.className="size-val"; tbrVal.textContent=l.textBgRadius??10;
-        tbrRng.oninput = e=>{ l.textBgRadius=+e.target.value; tbrVal.textContent=e.target.value; render(); };
-        rowTBR.appendChild(tbrRng); rowTBR.appendChild(tbrVal);
-        det.appendChild(rowTBR);
-      }
-
-      const rowA = document.createElement("div");
-      rowA.className = "ctrl-row";
-      rowA.innerHTML = '<span class="ctrl-label">揃え</span>';
-      const awrap = document.createElement("div");
-      awrap.style.cssText = "display:flex;gap:6px";
-      [["left","← 左"],["center","中央"],["right","右 →"]].forEach(([val,label])=>{
-        const b = document.createElement("button");
-        b.className = "chip" + ((l.align||"center")===val?" active":"");
-        b.textContent = label;
-        b.onclick = ()=>{ l.align=val; buildLines(); render(); };
-        awrap.appendChild(b);
-      });
-      rowA.appendChild(awrap);
-      det.appendChild(rowA);
-
-      if(l.vertical){
-        const rowV = document.createElement("div");
-        rowV.className = "ctrl-row";
-        rowV.innerHTML = '<span class="ctrl-label">縦位置</span>';
-        const vwrap = document.createElement("div");
-        vwrap.style.cssText = "display:flex;gap:6px";
-        [["center","中央"],["top","頭揃え"]].forEach(([val,label])=>{
-          const b = document.createElement("button");
-          b.className = "chip" + ((l.valign||"center")===val?" active":"");
-          b.textContent = label;
-          b.onclick = ()=>{ l.valign=val; buildLines(); render(); };
-          vwrap.appendChild(b);
-        });
-        rowV.appendChild(vwrap);
-        det.appendChild(rowV);
-      }
-
-      const supportsBold = FONTS[l.font??0].hasBold && !FONTS[l.font??0].weight;
-      const rowBold = document.createElement("div");
-      rowBold.className = "ctrl-row";
-      const bold = document.createElement("button");
-      bold.className = "toggle-bold" + (l.bold&&supportsBold?" on":"");
-      bold.textContent = supportsBold ? "太字" : "太字（非対応）";
-      bold.style.opacity = supportsBold ? "1" : "0.38";
-      bold.style.cursor = supportsBold ? "pointer" : "default";
-      bold.onclick = ()=>{ if(!supportsBold) return; l.bold=!l.bold; buildLines(); render(); };
-      rowBold.appendChild(bold);
-      det.appendChild(rowBold);
-
-      card.appendChild(det);
-    }
+    card.appendChild(det);
 
     const mini = document.createElement("div");
     mini.className = "mini-row";
