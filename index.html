@@ -1286,8 +1286,6 @@ function buildLines(){
     const tools = document.createElement("div");
     tools.className = "row-tools";
     tools.append(
-      mkBtn("↑", ()=>{ if(idx>0) swapArr(state.lines, idx, idx-1, buildLines); }),
-      mkBtn("↓", ()=>{ if(idx<state.lines.length-1) swapArr(state.lines, idx, idx+1, buildLines); }),
       mkDel(()=>{ state.lines.splice(idx,1); buildLines(); render(); })
     );
     mini.appendChild(tools);
@@ -1389,8 +1387,6 @@ function buildMsgs(){
     const tools = document.createElement("div");
     tools.className = "row-tools";
     tools.append(
-      mkBtn("↑", ()=>{ if(idx>0) swapArr(chat.msgs, idx, idx-1, buildMsgs); }),
-      mkBtn("↓", ()=>{ if(idx<chat.msgs.length-1) swapArr(chat.msgs, idx, idx+1, buildMsgs); }),
       mkDel(()=>{ chat.msgs.splice(idx,1); buildMsgs(); render(); })
     );
     top.appendChild(tools);
