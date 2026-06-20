@@ -550,6 +550,12 @@
   <button id="iro-close">決定</button>
 </div>
 
+<div id="ios-save-overlay">
+  <img id="ios-save-img" src="" alt="保存する画像">
+  <p id="ios-save-hint">画像を長押し →「写真に保存」を選んでください</p>
+  <button id="ios-save-close">閉じる</button>
+</div>
+
 <script>
 /* ================= ロック機能 ================= */
 const PW_HASH = "2d022615577ac3c4513dcd0e434af038400f2477e1ad3440e6af36aaee117556";
@@ -2041,12 +2047,7 @@ if("ResizeObserver" in window){
 }
 window.addEventListener("resize", syncPreviewOffset);
 // Canvas描画→レイアウト確定→オフセット計算の順を保証（iOS Safari対策）
-requestAnimationFrame(()=>{ syncPreviewOffset(); window.scrollTo(0,0); });
+requestAnimationFrame(syncPreviewOffset);
 </script>
-<div id="ios-save-overlay">
-  <img id="ios-save-img" src="" alt="保存する画像">
-  <p id="ios-save-hint">画像を長押し →「写真に保存」を選んでください</p>
-  <button id="ios-save-close">閉じる</button>
-</div>
 </body>
 </html>
