@@ -405,6 +405,12 @@
 #pw-toggle{background:var(--card);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:15px;cursor:pointer;line-height:1;flex-shrink:0}
 #pw-ok{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:10px 12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;flex-shrink:0}
 #pw-error{font-size:12px;color:var(--accent);font-weight:700}
+  /* ===== iOS 画像保存モーダル ===== */
+  #ios-save-overlay{display:none;position:fixed;inset:0;z-index:1100;background:rgba(0,0,0,.85)}
+  #ios-save-overlay.open{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px}
+  #ios-save-img{max-width:100%;max-height:60vh;border-radius:10px;display:block}
+  #ios-save-hint{color:#fff;font-size:14px;font-weight:700;text-align:center;line-height:1.6}
+  #ios-save-close{background:rgba(255,255,255,.18);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -1454,16 +1460,32 @@ tabE.onclick = ()=>setMode("emph");
 tabC.onclick = ()=>setMode("chat");
 
 /* ================= 保存 ================= */
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 document.getElementById("save").onclick = ()=>{
   render();
   saveHistory();
   cv.toBlob(blob=>{
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = mode==="emph" ? "kyocho-image.png" : "kaiwa-image.png";
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    if(isIOS){
+      const url = URL.createObjectURL(blob);
+      document.getElementById("ios-save-img").src = url;
+      document.getElementById("ios-save-overlay").classList.add("open");
+      document.getElementById("ios-save-overlay")._blobUrl = url;
+    } else {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = mode==="emph" ? "kyocho-image.png" : "kaiwa-image.png";
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }
   }, "image/png");
+};
+
+document.getElementById("ios-save-close").onclick = ()=>{
+  const overlay = document.getElementById("ios-save-overlay");
+  overlay.classList.remove("open");
+  if(overlay._blobUrl){ URL.revokeObjectURL(overlay._blobUrl); overlay._blobUrl = null; }
+  document.getElementById("ios-save-img").src = "";
 };
 
 /* ================= 履歴 ================= */
@@ -2022,5 +2044,10 @@ if("ResizeObserver" in window){
 window.addEventListener("resize", syncPreviewOffset);
 syncPreviewOffset();
 </script>
+<div id="ios-save-overlay">
+  <img id="ios-save-img" src="" alt="保存する画像">
+  <p id="ios-save-hint">画像を長押し →「写真に保存」を選んでください</p>
+  <button id="ios-save-close">閉じる</button>
+</div>
 </body>
 </html>
