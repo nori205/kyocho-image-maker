@@ -109,14 +109,14 @@
   }
 
   .detail-toggle{
-    width:100%;padding:6px 10px;border-radius:8px;
-    background:var(--paper);border:1.5px dashed var(--line);
-    font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.04em;
+    width:100%;padding:7px 10px;border-radius:8px;
+    background:#FFF0F4;border:1.5px solid #D4587A;
+    font-size:11px;font-weight:800;color:#C0456E;letter-spacing:.04em;
     cursor:pointer;font-family:inherit;
     display:flex;justify-content:space-between;align-items:center;
     margin:6px 0 2px;
   }
-  .detail-toggle:active{background:var(--line)}
+  .detail-toggle:active{background:#FFE0EA}
   .detail-section{
     border-left:2px solid var(--line);padding-left:10px;margin:2px 0 4px;
   }
@@ -1088,7 +1088,7 @@ function buildLines(){
     const isOpen = !!l._detailOpen;
     const toggleArrow = document.createElement("span");
     toggleArrow.textContent = isOpen ? "▲" : "▼";
-    detailToggle.append(Object.assign(document.createElement("span"),{textContent:"文字色・効果・揃えなど"}), toggleArrow);
+    detailToggle.append(Object.assign(document.createElement("span"),{textContent:"✦ 文字装飾できます（色・効果・揃え）"}), toggleArrow);
     card.appendChild(detailToggle);
 
     const det = document.createElement("div");
