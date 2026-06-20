@@ -1465,26 +1465,24 @@ const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 document.getElementById("save").onclick = ()=>{
   render();
   saveHistory();
-  cv.toBlob(blob=>{
-    if(isIOS){
-      const url = URL.createObjectURL(blob);
-      document.getElementById("ios-save-img").src = url;
-      document.getElementById("ios-save-overlay").classList.add("open");
-      document.getElementById("ios-save-overlay")._blobUrl = url;
-    } else {
+  if(isIOS){
+    // iOS Safari: toBlob+createObjectURLは固まる場合があるためtoDataURL（同期）を使用
+    const dataUrl = cv.toDataURL("image/png");
+    document.getElementById("ios-save-img").src = dataUrl;
+    document.getElementById("ios-save-overlay").classList.add("open");
+  } else {
+    cv.toBlob(blob=>{
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = mode==="emph" ? "kyocho-image.png" : "kaiwa-image.png";
       a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
-    }
-  }, "image/png");
+    }, "image/png");
+  }
 };
 
 document.getElementById("ios-save-close").onclick = ()=>{
-  const overlay = document.getElementById("ios-save-overlay");
-  overlay.classList.remove("open");
-  if(overlay._blobUrl){ URL.revokeObjectURL(overlay._blobUrl); overlay._blobUrl = null; }
+  document.getElementById("ios-save-overlay").classList.remove("open");
   document.getElementById("ios-save-img").src = "";
 };
 
@@ -2024,7 +2022,7 @@ buildChatBg(); buildPersons(); buildMsgs();
 buildTemplates(); buildHistory();
 render();
 if(document.fonts && document.fonts.ready){
-  document.fonts.ready.then(render);
+  document.fonts.ready.then(()=>{ render(); requestAnimationFrame(syncPreviewOffset); });
 }
 
 /* ===== スマホ：固定プレビューの高さ分だけコンテンツをずらす ===== */
@@ -2042,7 +2040,8 @@ if("ResizeObserver" in window){
   new ResizeObserver(syncPreviewOffset).observe(previewEl);
 }
 window.addEventListener("resize", syncPreviewOffset);
-syncPreviewOffset();
+// Canvas描画→レイアウト確定→オフセット計算の順を保証（iOS Safari対策）
+requestAnimationFrame(()=>{ syncPreviewOffset(); window.scrollTo(0,0); });
 </script>
 <div id="ios-save-overlay">
   <img id="ios-save-img" src="" alt="保存する画像">
