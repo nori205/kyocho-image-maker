@@ -627,7 +627,6 @@ let state = {
   bgOpacity: 1,
   lines: [
     {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"},
-    {text:"", size:130, color:"#E8332E", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"},
   ]
 };
 
@@ -807,7 +806,7 @@ function renderEmph(){
 
   const vLines = state.lines.filter(l => l.vertical && l.text.trim() !== "");
   vLines.forEach((l, i) => {
-    const xOverride = vLines.length === 1 ? undefined : s.w * (i + 1) / (vLines.length + 1);
+    const xOverride = vLines.length === 1 ? undefined : s.w * (vLines.length - i) / (vLines.length + 1);
     drawVertical(l, s, xOverride);
   });
 }
