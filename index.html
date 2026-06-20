@@ -469,7 +469,7 @@
       <button class="tab" id="tabChat">💬 会話</button>
     </div>
 
-    <button class="detail-toggle" id="sizeToggle" style="margin:14px 0 2px"><span id="sizeToggleLbl">横長 1280×480</span><span id="sizeArrow">▼</span></button>
+    <button class="detail-toggle" id="sizeToggle" style="margin:14px 0 2px"><span id="sizeToggleLbl">背景画像の大きさ：横長 1280×480</span><span id="sizeArrow">▼</span></button>
     <div class="sec-panel" id="sizePanel" style="display:none"><div class="size-row" id="sizeRow"></div></div>
 
     <!-- ===== 文字強調モード ===== -->
@@ -1065,7 +1065,7 @@ function setBgPanelOpen(v){
 }
 function updateSizeLbl(){
   const label = mode==="emph" ? SIZES[state.sizeIdx].label : CHAT_WIDTHS[chat.widthIdx].label;
-  document.getElementById("sizeToggleLbl").textContent = label;
+  document.getElementById("sizeToggleLbl").textContent = "背景画像の大きさ：" + label;
 }
 function updateBgLbl(){
   const bg = state.bg;
