@@ -117,6 +117,7 @@
     margin:6px 0 2px;
   }
   .detail-toggle:active{background:#9D6638}
+  .sec-panel{margin:4px 0 10px}
   .detail-section{
     border-left:2px solid var(--line);padding-left:10px;margin:2px 0 4px;
   }
@@ -468,14 +469,13 @@
       <button class="tab" id="tabChat">💬 会話</button>
     </div>
 
-    <div class="sec">画像サイズ</div>
-    <div class="size-row" id="sizeRow"></div>
+    <button class="detail-toggle" id="sizeToggle" style="margin:14px 0 2px"><span id="sizeToggleLbl">横長 1280×480</span><span id="sizeArrow">▼</span></button>
+    <div class="sec-panel" id="sizePanel" style="display:none"><div class="size-row" id="sizeRow"></div></div>
 
     <!-- ===== 文字強調モード ===== -->
     <div id="modeEmph">
-      <div class="sec">背景色</div>
-      <div class="dots" id="bgDots"></div>
-      <div id="bgOpacityRow"></div>
+      <button class="detail-toggle" id="bgToggle" style="margin:16px 0 2px"><span id="bgToggleLbl">背景色</span><span id="bgArrow">▼</span></button>
+      <div class="sec-panel" id="bgPanel" style="display:none"><div class="dots" id="bgDots"></div><div id="bgOpacityRow"></div></div>
       <div class="sec" id="tmplSec">テンプレート</div>
       <div class="tmpl-wrap" id="templates"></div>
       <button class="tmpl-save" id="saveTemplate" style="margin-top:8px">＋ 現在の設定を保存</button>
@@ -967,7 +967,7 @@ function buildSizes(){
       const b = document.createElement("button");
       b.className = "chip" + (i===state.sizeIdx?" active":"");
       b.textContent = s.label;
-      b.onclick = ()=>{ state.sizeIdx = i; buildSizes(); render(); };
+      b.onclick = ()=>{ state.sizeIdx = i; buildSizes(); render(); setSizePanelOpen(false); };
       sizeRow.appendChild(b);
     });
   }else{
@@ -975,14 +975,14 @@ function buildSizes(){
       const b = document.createElement("button");
       b.className = "chip" + (i===chat.widthIdx?" active":"");
       b.textContent = s.label + "（高さは自動）";
-      b.onclick = ()=>{ chat.widthIdx = i; buildSizes(); render(); };
+      b.onclick = ()=>{ chat.widthIdx = i; buildSizes(); render(); setSizePanelOpen(false); };
       sizeRow.appendChild(b);
     });
   }
 }
 
 /* ================= UI：色ドット共通 ================= */
-function buildDots(el, colors, get, set, withCustom){
+function buildDots(el, colors, get, set, withCustom, onSelect){
   el.innerHTML = "";
   colors.forEach(c=>{
     const d = document.createElement("button");
@@ -996,7 +996,7 @@ function buildDots(el, colors, get, set, withCustom){
     } else {
       d.style.background = c;
     }
-    d.onclick = ()=>{ set(c); buildDots(el, colors, get, set, withCustom); render(); };
+    d.onclick = ()=>{ set(c); buildDots(el, colors, get, set, withCustom, onSelect); render(); if(onSelect) onSelect(); };
     el.appendChild(d);
   });
   if(withCustom){
@@ -1040,9 +1040,42 @@ function buildBgOpacity(){
   bgOpacityEl.appendChild(row);
 }
 function buildBg(){
-  buildDots(bgDots, BG_COLORS, ()=>state.bg, v=>{ state.bg=v; buildBgOpacity(); render(); }, true);
+  buildDots(bgDots, BG_COLORS, ()=>state.bg, v=>{ state.bg=v; buildBgOpacity(); render(); }, true, ()=> setBgPanelOpen(false));
   buildBgOpacity();
 }
+
+/* ===== 画像サイズ・背景色 パネルトグル ===== */
+let sizePanelOpen = false;
+let bgPanelOpen = false;
+const sizePanelEl = document.getElementById("sizePanel");
+const bgPanelEl = document.getElementById("bgPanel");
+const sizeArrowEl = document.getElementById("sizeArrow");
+const bgArrowEl = document.getElementById("bgArrow");
+function setSizePanelOpen(v){
+  sizePanelOpen = v;
+  sizePanelEl.style.display = v ? "block" : "none";
+  sizeArrowEl.textContent = v ? "▲" : "▼";
+  if(!v) updateSizeLbl();
+}
+function setBgPanelOpen(v){
+  bgPanelOpen = v;
+  bgPanelEl.style.display = v ? "block" : "none";
+  bgArrowEl.textContent = v ? "▲" : "▼";
+  if(!v) updateBgLbl();
+}
+function updateSizeLbl(){
+  const label = mode==="emph" ? SIZES[state.sizeIdx].label : CHAT_WIDTHS[chat.widthIdx].label;
+  document.getElementById("sizeToggleLbl").textContent = label;
+}
+function updateBgLbl(){
+  const bg = state.bg;
+  const swatch = bg==="transparent"
+    ? `<span style="display:inline-block;width:13px;height:13px;border-radius:50%;border:1.5px solid rgba(255,255,255,.8);background-color:#fff;background-image:linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);background-size:6px 6px;background-position:0 0,0 3px,3px -3px,-3px 0;vertical-align:middle;margin-bottom:1px"></span>`
+    : `<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:${bg};border:1.5px solid rgba(255,255,255,.8);vertical-align:middle;margin-bottom:1px"></span>`;
+  document.getElementById("bgToggleLbl").innerHTML = `背景色 ${swatch}`;
+}
+document.getElementById("sizeToggle").onclick = ()=> setSizePanelOpen(!sizePanelOpen);
+document.getElementById("bgToggle").onclick = ()=> setBgPanelOpen(!bgPanelOpen);
 
 const linesEl = document.getElementById("lines");
 function buildLines(){
@@ -1573,7 +1606,7 @@ function buildHistory(){
       if(item.mode === "emph"){
         Object.assign(state, JSON.parse(JSON.stringify(item.data)));
         setMode("emph");
-        buildBg(); buildLines(); buildTemplates();
+        buildBg(); buildLines(); buildTemplates(); updateSizeLbl(); updateBgLbl();
       } else {
         Object.assign(chat, JSON.parse(JSON.stringify(item.data)));
         // imgSrc から img を再構築（JSON.stringify で Image 要素は失われるため）
@@ -1881,7 +1914,7 @@ function buildTemplates(){
     chip.className = "tmpl-chip";
     chip.onclick = ()=>{
       Object.assign(state, JSON.parse(JSON.stringify(t.state)));
-      buildSizes(); buildBg(); buildLines(); render();
+      buildSizes(); buildBg(); buildLines(); render(); updateSizeLbl(); updateBgLbl();
     };
     const nm = document.createElement("span");
     nm.textContent = t.name;
@@ -2027,6 +2060,7 @@ buildSizes(); buildBg(); buildDir(); buildLines();
 buildChatBg(); buildPersons(); buildMsgs();
 buildTemplates(); buildHistory();
 render();
+updateSizeLbl(); updateBgLbl();
 if(document.fonts && document.fonts.ready){
   document.fonts.ready.then(()=>{ render(); requestAnimationFrame(syncPreviewOffset); });
 }
