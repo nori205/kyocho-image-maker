@@ -1646,11 +1646,20 @@ function buildMsgs(){
     top.appendChild(tools);
     card.appendChild(top);
 
+    const taWrap = document.createElement("div");
+    taWrap.className = "ta-wrap";
     const ta = document.createElement("textarea");
     ta.rows = 2; ta.value = m.text;
     ta.placeholder = "セリフを入力（改行OK・絵文字OK）";
-    ta.oninput = e=>{ m.text = e.target.value; render(); };
-    card.appendChild(ta);
+    const taClr = document.createElement("button");
+    taClr.className = "ta-clear" + (m.text ? " visible" : "");
+    taClr.textContent = "✕";
+    taClr.title = "テキストをクリア";
+    taClr.onclick = ()=>{ m.text=""; ta.value=""; taClr.classList.remove("visible"); render(); ta.focus(); };
+    ta.oninput = e=>{ m.text = e.target.value; taClr.classList.toggle("visible", !!e.target.value); render(); };
+    taWrap.appendChild(ta);
+    taWrap.appendChild(taClr);
+    card.appendChild(taWrap);
 
     const rowF = document.createElement("div");
     rowF.className = "ctrl-row";
