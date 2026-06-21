@@ -1447,7 +1447,7 @@ function buildLines(){
     fxwrap.appendChild(shadowBtn);
     const glowBtn = document.createElement("button");
     glowBtn.className = "chip" + (l.glow?" active":"");
-    glowBtn.textContent = "グロー";
+    glowBtn.textContent = "ネオン";
     glowBtn.onclick = ()=>{ l.glow=!l.glow; glowBtn.className="chip"+(l.glow?" active":""); rowGlowC.style.display=l.glow?"flex":"none"; rowGlowB.style.display=l.glow?"flex":"none"; render(); };
     fxwrap.appendChild(glowBtn);
     rowFx.appendChild(fxwrap);
