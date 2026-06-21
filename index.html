@@ -637,8 +637,10 @@ let state = {
   sizeIdx: 0,
   bg: "#FFFFFF",
   bgOpacity: 1,
+  waveAmplitude: 40,
+  wavePeriod: 400,
   lines: [
-    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"},
+    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4"},
   ]
 };
 
@@ -669,6 +671,8 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
   ctx.font = fontStr(l, ds);
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
+  const vGrad = l.colorMode === "gradient"
+    ? makeLinGrad(xAdj, startY, xAdj, startY + chars.length * charH, l) : null;
   chars.forEach((ch,i)=>{
     let cx=xAdj, cy=startY+i*charH;
     if('。．'.includes(ch)){cx+=ds*0.3;cy-=ds*0.1;}
@@ -680,6 +684,8 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
       ctx.beginPath();ctx.roundRect(cx-ds/2-bpx,cy-bpx,ds+bpx*2,ds+bpx*2,rad);
       ctx.fill();ctx.restore();
     }
+    ctx.save();
+    ctx.globalAlpha = l.textOpacity ?? 1;
     if(l.shadow){
       ctx.shadowColor="rgba(0,0,0,0.35)";ctx.shadowBlur=ds*0.12;
       ctx.shadowOffsetX=ds*0.04;ctx.shadowOffsetY=ds*0.04;
@@ -688,12 +694,11 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
     const sc=sw==="white"?"#FFFFFF":sw==="black"?"#000000":(l.strokeColor||"#000000");
     const isHollow=sw==="hollow";
     const hasStroke=sw==="stroke"||sw==="white"||sw==="black"||isHollow;
-    if(hasStroke){
-      ctx.strokeStyle=sc;ctx.lineWidth=ds*(l.strokeWidth||6)/100;
-      ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);
-    }
-    if(!isHollow){ctx.fillStyle=l.color;ctx.fillText(ch,cx,cy);}
-    ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0;
+    const primColor = l.colorMode==="rainbow" ? rainbowColor(i,chars.length) : (vGrad || l.color);
+    if(hasStroke && !isHollow){ctx.strokeStyle=sc;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
+    if(isHollow){ctx.strokeStyle=primColor;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
+    else{ctx.fillStyle=primColor;ctx.fillText(ch,cx,cy);}
+    ctx.restore();
   });
 }
 
@@ -716,6 +721,74 @@ function drawVertical(l, s, xOverride){
   cols.forEach((text, i)=>{
     const x = startX + (cols.length - 1 - i) * colStep;
     drawVerticalColumn([...text], l, drawSize, s, x);
+  });
+}
+
+/* ================= カラーモード共通ヘルパー ================= */
+function rainbowColor(i, total){
+  return `hsl(${(i / Math.max(total - 1, 1)) * 300},100%,48%)`;
+}
+function makeLinGrad(x1, y1, x2, y2, l){
+  const g = ctx.createLinearGradient(x1, y1, x2, y2);
+  g.addColorStop(0, l.gradStart || "#FF6B6B");
+  g.addColorStop(1, l.gradEnd || "#4ECDC4");
+  return g;
+}
+
+/* ================= 波打ち描画 ================= */
+function drawWave(l, s, lineIdx, totalWaveLines){
+  const text = l.text.replace(/\n/g, '');
+  if(!text) return;
+
+  const amp = state.waveAmplitude;
+  const period = state.wavePeriod;
+  const ds = l.size;
+
+  ctx.font = fontStr(l, ds);
+  ctx.textBaseline = "middle";
+
+  const chars = [...text];
+  const widths = chars.map(ch => ctx.measureText(ch).width);
+  const totalW = widths.reduce((a,b) => a+b, 0);
+
+  const centerY = totalWaveLines === 1
+    ? s.h / 2
+    : s.h * (lineIdx + 1) / (totalWaveLines + 1);
+
+  const startX = (s.w - totalW) / 2;
+  const wGrad = l.colorMode === "gradient"
+    ? makeLinGrad(startX, 0, startX + totalW, 0, l) : null;
+  let curX = startX;
+
+  chars.forEach((ch, i) => {
+    const w = widths[i];
+    const cx = curX + w / 2;
+    const waveY = centerY + amp * Math.sin(2 * Math.PI * cx / period);
+    const angle = Math.atan(2 * Math.PI * amp / period * Math.cos(2 * Math.PI * cx / period));
+
+    ctx.save();
+    ctx.globalAlpha = l.textOpacity ?? 1;
+    ctx.translate(cx, waveY);
+    ctx.rotate(angle);
+    ctx.textAlign = "center";
+
+    if(l.shadow){
+      ctx.shadowColor = "rgba(0,0,0,0.35)";
+      ctx.shadowBlur = ds * 0.12;
+      ctx.shadowOffsetX = ds * 0.04;
+      ctx.shadowOffsetY = ds * 0.04;
+    }
+    const sw = l.stroke;
+    const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
+    const isHollow = sw === "hollow";
+    const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
+    const primColor = l.colorMode === "rainbow" ? rainbowColor(i, chars.length) : (wGrad || l.color);
+    if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
+    if(isHollow){ ctx.strokeStyle=primColor; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
+    else{ ctx.fillStyle=primColor; ctx.fillText(ch,0,0); }
+    ctx.restore();
+
+    curX += w;
   });
 }
 
@@ -746,7 +819,7 @@ function renderEmph(){
 
   const drawn = [];
   state.lines.forEach(l=>{
-    if(l.vertical) return;
+    if(l.vertical || l.wave) return;
     const subTexts = l.text.split("\n").filter(t => t.trim() !== "");
     if(subTexts.length === 0) return;
     const max = s.w * 0.9;
@@ -789,6 +862,8 @@ function renderEmph(){
         ctx.restore();
       }
 
+      ctx.save();
+      ctx.globalAlpha = l.textOpacity ?? 1;
       if(l.shadow){
         ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = l.drawSize * 0.12;
@@ -799,18 +874,28 @@ function renderEmph(){
       const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
       const isHollow = sw === "hollow";
       const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
-      if(hasStroke){
-        ctx.strokeStyle = sc;
-        ctx.lineWidth = l.drawSize * (l.strokeWidth || 6) / 100;
-        ctx.lineJoin = "round";
-        ctx.strokeText(l.text, x, y);
+      if(l.colorMode === "rainbow"){
+        const rChars = [...l.text];
+        const rWidths = rChars.map(ch => ctx.measureText(ch).width);
+        const rTotalW = rWidths.reduce((a,b)=>a+b,0);
+        let rx = align==="center" ? x-rTotalW/2 : align==="right" ? x-rTotalW : x;
+        ctx.textAlign = "left";
+        rChars.forEach((ch, ri)=>{
+          const rc = rainbowColor(ri, rChars.length);
+          if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,rx,y); }
+          if(isHollow){ ctx.strokeStyle=rc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,rx,y); }
+          else{ ctx.fillStyle=rc; ctx.fillText(ch,rx,y); }
+          rx += rWidths[ri];
+        });
+      } else {
+        const tw = ctx.measureText(l.text).width;
+        const gx1 = align==="center" ? x-tw/2 : align==="right" ? x-tw : x;
+        const primColor = l.colorMode==="gradient" ? makeLinGrad(gx1,y,gx1+tw,y,l) : l.color;
+        if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
+        if(isHollow){ ctx.strokeStyle=primColor; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
+        else{ ctx.fillStyle=primColor; ctx.fillText(l.text,x,y); }
       }
-      if(!isHollow){
-        ctx.fillStyle = l.color;
-        ctx.fillText(l.text, x, y);
-      }
-      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
-      ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+      ctx.restore();
 
       y += l.drawSize;
     });
@@ -821,6 +906,9 @@ function renderEmph(){
     const xOverride = vLines.length === 1 ? undefined : s.w * (vLines.length - i) / (vLines.length + 1);
     drawVertical(l, s, xOverride);
   });
+
+  const wLines = state.lines.filter(l => l.wave && l.text.trim() !== "");
+  wLines.forEach((l, i) => drawWave(l, s, i, wLines.length));
 }
 
 /* ================= 会話モード描画 ================= */
@@ -1012,15 +1100,54 @@ function buildDots(el, colors, get, set, withCustom, onSelect){
 function buildDir(){
   const el = document.getElementById("dirRow");
   el.innerHTML = "";
-  el.style.cssText = "display:flex;gap:8px;margin-bottom:4px";
+  el.style.cssText = "display:flex;flex-direction:column;gap:6px;margin-bottom:4px";
+
   const isV = state.lines.some(l=>l.vertical);
-  [["横書き",false],["縦書き",true]].forEach(([label,v])=>{
+  const isW = state.lines.some(l=>l.wave);
+  const curMode = isW ? "wave" : isV ? "vertical" : "horizontal";
+
+  const btnRow = document.createElement("div");
+  btnRow.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
+  [["横書き","horizontal"],["縦書き","vertical"],["〜 波打ち","wave"]].forEach(([label,m])=>{
     const b = document.createElement("button");
-    b.className = "chip" + (isV===v?" active":"");
+    b.className = "chip" + (curMode===m?" active":"");
     b.textContent = label;
-    b.onclick = ()=>{ state.lines.forEach(l=>l.vertical=v); buildDir(); buildLines(); render(); };
-    el.appendChild(b);
+    b.onclick = ()=>{
+      state.lines.forEach(l=>{ l.vertical=(m==="vertical"); l.wave=(m==="wave"); });
+      buildDir(); buildLines(); render();
+    };
+    btnRow.appendChild(b);
   });
+  el.appendChild(btnRow);
+
+  if(isW){
+    const panel = document.createElement("div");
+    panel.style.cssText = "border-left:2px solid var(--line);padding-left:10px;margin:2px 0 4px";
+
+    const ampRow = document.createElement("div");
+    ampRow.className = "ctrl-row";
+    ampRow.innerHTML = '<span class="ctrl-label">振幅</span>';
+    const ampRng = document.createElement("input");
+    ampRng.type="range"; ampRng.min=5; ampRng.max=200; ampRng.value=state.waveAmplitude;
+    const ampVal = document.createElement("span");
+    ampVal.className="size-val"; ampVal.textContent=state.waveAmplitude+"px";
+    ampRng.oninput = e=>{ state.waveAmplitude=+e.target.value; ampVal.textContent=e.target.value+"px"; render(); };
+    ampRow.appendChild(ampRng); ampRow.appendChild(ampVal);
+    panel.appendChild(ampRow);
+
+    const perRow = document.createElement("div");
+    perRow.className = "ctrl-row";
+    perRow.innerHTML = '<span class="ctrl-label">周期</span>';
+    const perRng = document.createElement("input");
+    perRng.type="range"; perRng.min=100; perRng.max=2000; perRng.step=10; perRng.value=state.wavePeriod;
+    const perVal = document.createElement("span");
+    perVal.className="size-val"; perVal.textContent=state.wavePeriod+"px";
+    perRng.oninput = e=>{ state.wavePeriod=+e.target.value; perVal.textContent=e.target.value+"px"; render(); };
+    perRow.appendChild(perRng); perRow.appendChild(perVal);
+    panel.appendChild(perRow);
+
+    el.appendChild(panel);
+  }
 }
 
 const bgDots = document.getElementById("bgDots");
@@ -1141,15 +1268,74 @@ function buildLines(){
       toggleArrow.textContent = l._detailOpen ? "▲" : "▼";
     };
 
-    // 文字色
+    // 文字色モード（通常/グラデ/虹色）
     const row2 = document.createElement("div");
     row2.className = "ctrl-row";
-    row2.innerHTML = '<span class="ctrl-label">文字色</span>';
-    const dwrap = document.createElement("div");
-    dwrap.className = "dots";
-    row2.appendChild(dwrap);
+    row2.style.alignItems = "flex-start";
+    row2.innerHTML = '<span class="ctrl-label" style="padding-top:6px">文字色</span>';
+    const cmWrap = document.createElement("div");
+    cmWrap.style.cssText = "display:flex;flex-direction:column;gap:8px;flex:1";
+
+    const cmBtns = document.createElement("div");
+    cmBtns.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+    const cmBtnList = [];
+    [["通常色","normal"],["グラデ","gradient"],["虹色","rainbow"]].forEach(([label,mode])=>{
+      const b = document.createElement("button");
+      b.className = "chip" + ((l.colorMode||"normal")===mode?" active":"");
+      b.textContent = label;
+      b.onclick = ()=>{
+        l.colorMode = mode;
+        cmBtnList.forEach(([bb,mm])=>bb.className="chip"+(mm===mode?" active":""));
+        normalColorRow.style.display = mode==="normal" ? "" : "none";
+        gradColorRow.style.display = mode==="gradient" ? "flex" : "none";
+        render();
+      };
+      cmBtnList.push([b,mode]);
+      cmBtns.appendChild(b);
+    });
+    cmWrap.appendChild(cmBtns);
+
+    const normalColorRow = document.createElement("div");
+    normalColorRow.className = "dots";
+    normalColorRow.style.display = (l.colorMode||"normal")==="normal" ? "" : "none";
+    buildDots(normalColorRow, TEXT_COLORS, ()=>l.color, v=>{ l.color=v; render(); }, true);
+    cmWrap.appendChild(normalColorRow);
+
+    const gradColorRow = document.createElement("div");
+    gradColorRow.style.cssText = "display:" + (l.colorMode==="gradient" ? "flex" : "none") + ";gap:10px;align-items:center;flex-wrap:wrap";
+    const gsLabel = document.createElement("span");
+    gsLabel.style.cssText = "font-size:11px;color:var(--muted);font-weight:700";
+    gsLabel.textContent = "開始色";
+    const gsSwatch = document.createElement("button");
+    gsSwatch.className = "stroke-swatch";
+    gsSwatch.style.cssText = "width:36px;height:36px;border-radius:8px;border:2px solid var(--line)";
+    gsSwatch.style.background = l.gradStart || "#FF6B6B";
+    gsSwatch.onclick = ()=> openIroPicker(l.gradStart||"#FF6B6B", hex=>{ l.gradStart=hex; gsSwatch.style.background=hex; render(); }, "グラデ開始色");
+    const geLabel = document.createElement("span");
+    geLabel.style.cssText = "font-size:11px;color:var(--muted);font-weight:700";
+    geLabel.textContent = "終了色";
+    const geSwatch = document.createElement("button");
+    geSwatch.className = "stroke-swatch";
+    geSwatch.style.cssText = "width:36px;height:36px;border-radius:8px;border:2px solid var(--line)";
+    geSwatch.style.background = l.gradEnd || "#4ECDC4";
+    geSwatch.onclick = ()=> openIroPicker(l.gradEnd||"#4ECDC4", hex=>{ l.gradEnd=hex; geSwatch.style.background=hex; render(); }, "グラデ終了色");
+    gradColorRow.append(gsLabel, gsSwatch, geLabel, geSwatch);
+    cmWrap.appendChild(gradColorRow);
+
+    row2.appendChild(cmWrap);
     det.appendChild(row2);
-    buildDots(dwrap, TEXT_COLORS, ()=>l.color, v=>{ l.color=v; render(); }, true);
+
+    // 文字の透過
+    const rowTO = document.createElement("div");
+    rowTO.className = "ctrl-row";
+    rowTO.innerHTML = '<span class="ctrl-label">文字の透過</span>';
+    const toRng = document.createElement("input");
+    toRng.type="range"; toRng.min=0; toRng.max=100; toRng.value=Math.round((l.textOpacity??1)*100);
+    const toVal = document.createElement("span");
+    toVal.className="size-val"; toVal.textContent=Math.round((l.textOpacity??1)*100)+"%";
+    toRng.oninput = e=>{ l.textOpacity=+e.target.value/100; toVal.textContent=e.target.value+"%"; render(); };
+    rowTO.appendChild(toRng); rowTO.appendChild(toVal);
+    det.appendChild(rowTO);
 
     // 前の余白
     const rowM = document.createElement("div");
@@ -1349,7 +1535,7 @@ document.getElementById("clearLines").onclick = ()=>{
 };
 
 document.getElementById("addLine").onclick = ()=>{
-  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, valign:"center"});
+  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4"});
   buildLines(); render();
   const tas = linesEl.querySelectorAll("textarea");
   tas[tas.length-1].focus();
