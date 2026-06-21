@@ -657,7 +657,7 @@ let state = {
   waveAmplitude: 40,
   wavePeriod: 400,
   lines: [
-    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4"},
+    {text:"", size:64, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4", glow:false, glowColor:"#00FFFF", glowBlur:20},
   ]
 };
 
@@ -699,6 +699,16 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
       ctx.beginPath();ctx.roundRect(cx-ds/2-bpx,cy-bpx,ds+bpx*2,ds+bpx*2,rad);
       ctx.fill();ctx.restore();
     }
+    if(l.glow){
+      ctx.save();
+      ctx.globalAlpha = l.textOpacity ?? 1;
+      ctx.fillStyle = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
+      ctx.shadowColor = l.glowColor || "#00FFFF";
+      const gs = (l.glowBlur||20) * ds / 40;
+      ctx.shadowBlur = gs*1.5; ctx.fillText(ch,cx,cy);
+      ctx.shadowBlur = gs*0.7; ctx.fillText(ch,cx,cy);
+      ctx.restore();
+    }
     ctx.save();
     ctx.globalAlpha = l.textOpacity ?? 1;
     if(l.shadow){
@@ -709,7 +719,7 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
     const sc=sw==="white"?"#FFFFFF":sw==="black"?"#000000":(l.strokeColor||"#000000");
     const isHollow=sw==="hollow";
     const hasStroke=sw==="stroke"||sw==="white"||sw==="black"||isHollow;
-    const primColor = (l.colorMode==="rainbow"||l.colorMode==="gradient") ? charColor(i,chars.length,l) : l.color;
+    const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
     if(hasStroke && !isHollow){ctx.strokeStyle=sc;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
     if(isHollow){ctx.strokeStyle=primColor;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
     else{ctx.fillStyle=primColor;ctx.fillText(ch,cx,cy);}
@@ -740,9 +750,6 @@ function drawVertical(l, s, xOverride){
 }
 
 /* ================= カラーモード共通ヘルパー ================= */
-function rainbowColor(i, total){
-  return `hsl(${(i / Math.max(total - 1, 1)) * 300},100%,48%)`;
-}
 function gradColor(i, total, l){
   const t = total <= 1 ? 0 : i / (total - 1);
   const c1 = l.gradStart || "#FF6B6B", c2 = l.gradEnd || "#4ECDC4";
@@ -751,7 +758,7 @@ function gradColor(i, total, l){
   return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
 }
 function charColor(i, total, l){
-  return l.colorMode==="rainbow" ? rainbowColor(i,total) : gradColor(i,total,l);
+  return gradColor(i,total,l);
 }
 
 /* ================= 波打ち描画 ================= */
@@ -783,6 +790,19 @@ function drawWave(l, s, lineIdx, totalWaveLines){
     const waveY = centerY + amp * Math.sin(2 * Math.PI * cx / period);
     const angle = Math.atan(2 * Math.PI * amp / period * Math.cos(2 * Math.PI * cx / period));
 
+    if(l.glow){
+      ctx.save();
+      ctx.globalAlpha = l.textOpacity ?? 1;
+      ctx.translate(cx, waveY);
+      ctx.rotate(angle);
+      ctx.textAlign = "center";
+      ctx.fillStyle = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
+      ctx.shadowColor = l.glowColor || "#00FFFF";
+      const gs = (l.glowBlur||20) * ds / 40;
+      ctx.shadowBlur = gs*1.5; ctx.fillText(ch,0,0);
+      ctx.shadowBlur = gs*0.7; ctx.fillText(ch,0,0);
+      ctx.restore();
+    }
     ctx.save();
     ctx.globalAlpha = l.textOpacity ?? 1;
     ctx.translate(cx, waveY);
@@ -799,7 +819,7 @@ function drawWave(l, s, lineIdx, totalWaveLines){
     const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
     const isHollow = sw === "hollow";
     const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
-    const primColor = (l.colorMode==="rainbow"||l.colorMode==="gradient") ? charColor(i,chars.length,l) : l.color;
+    const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
     if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
     if(isHollow){ ctx.strokeStyle=primColor; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
     else{ ctx.fillStyle=primColor; ctx.fillText(ch,0,0); }
@@ -879,6 +899,29 @@ function renderEmph(){
         ctx.restore();
       }
 
+      const pChars = l.colorMode==="gradient" ? [...l.text] : null;
+      const pWidths = pChars ? pChars.map(ch => ctx.measureText(ch).width) : null;
+      const pTotalW = pWidths ? pWidths.reduce((a,b)=>a+b,0) : 0;
+      if(l.glow){
+        ctx.save();
+        ctx.globalAlpha = l.textOpacity ?? 1;
+        ctx.shadowColor = l.glowColor || "#00FFFF";
+        const gs = (l.glowBlur||20) * l.drawSize / 40;
+        if(l.colorMode === "gradient"){
+          ctx.textAlign = "left";
+          [gs*1.5, gs*0.7].forEach(blur=>{
+            ctx.shadowBlur = blur;
+            let gpx = align==="center" ? x-pTotalW/2 : align==="right" ? x-pTotalW : x;
+            pChars.forEach((ch,pi)=>{ ctx.fillStyle=charColor(pi,pChars.length,l); ctx.fillText(ch,gpx,y); gpx+=pWidths[pi]; });
+          });
+          ctx.textAlign = align;
+        } else {
+          ctx.fillStyle = l.color;
+          ctx.shadowBlur = gs*1.5; ctx.fillText(l.text,x,y);
+          ctx.shadowBlur = gs*0.7; ctx.fillText(l.text,x,y);
+        }
+        ctx.restore();
+      }
       ctx.save();
       ctx.globalAlpha = l.textOpacity ?? 1;
       if(l.shadow){
@@ -891,10 +934,7 @@ function renderEmph(){
       const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
       const isHollow = sw === "hollow";
       const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
-      if(l.colorMode === "rainbow" || l.colorMode === "gradient"){
-        const pChars = [...l.text];
-        const pWidths = pChars.map(ch => ctx.measureText(ch).width);
-        const pTotalW = pWidths.reduce((a,b)=>a+b,0);
+      if(l.colorMode === "gradient"){
         let px = align==="center" ? x-pTotalW/2 : align==="right" ? x-pTotalW : x;
         ctx.textAlign = "left";
         pChars.forEach((ch, pi)=>{
@@ -1302,7 +1342,7 @@ function buildLines(){
     const cmBtns = document.createElement("div");
     cmBtns.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
     const cmBtnList = [];
-    [["通常色","normal"],["グラデ","gradient"],["虹色","rainbow"]].forEach(([label,mode])=>{
+    [["通常色","normal"],["グラデ","gradient"]].forEach(([label,mode])=>{
       const b = document.createElement("button");
       b.className = "chip" + ((l.colorMode||"normal")===mode?" active":"");
       b.textContent = label;
@@ -1405,8 +1445,38 @@ function buildLines(){
     shadowBtn.textContent = "影";
     shadowBtn.onclick = ()=>{ l.shadow=!l.shadow; shadowBtn.className="chip"+(l.shadow?" active":""); render(); };
     fxwrap.appendChild(shadowBtn);
+    const glowBtn = document.createElement("button");
+    glowBtn.className = "chip" + (l.glow?" active":"");
+    glowBtn.textContent = "グロー";
+    glowBtn.onclick = ()=>{ l.glow=!l.glow; glowBtn.className="chip"+(l.glow?" active":""); rowGlowC.style.display=l.glow?"flex":"none"; rowGlowB.style.display=l.glow?"flex":"none"; render(); };
+    fxwrap.appendChild(glowBtn);
     rowFx.appendChild(fxwrap);
     det.appendChild(rowFx);
+
+    const rowGlowC = document.createElement("div");
+    rowGlowC.className = "ctrl-row";
+    rowGlowC.style.display = l.glow ? "flex" : "none";
+    rowGlowC.innerHTML = '<span class="ctrl-label">発光色</span>';
+    const glowSwatch = document.createElement("button");
+    glowSwatch.className = "stroke-swatch";
+    glowSwatch.style.cssText = "width:30px;height:30px;border-radius:50%;border:2px solid var(--line);flex-shrink:0";
+    glowSwatch.style.background = l.glowColor || "#00FFFF";
+    glowSwatch.title = "発光色を選ぶ";
+    glowSwatch.onclick = ()=> openIroPicker(l.glowColor||"#00FFFF", hex=>{ l.glowColor=hex; glowSwatch.style.background=hex; render(); }, "発光色");
+    rowGlowC.appendChild(glowSwatch);
+    det.appendChild(rowGlowC);
+
+    const rowGlowB = document.createElement("div");
+    rowGlowB.className = "ctrl-row";
+    rowGlowB.style.display = l.glow ? "flex" : "none";
+    rowGlowB.innerHTML = '<span class="ctrl-label">強さ</span>';
+    const glowRng = document.createElement("input");
+    glowRng.type="range"; glowRng.min=5; glowRng.max=80; glowRng.value=l.glowBlur||20;
+    const glowVal = document.createElement("span");
+    glowVal.className="size-val"; glowVal.textContent=l.glowBlur||20;
+    glowRng.oninput = e=>{ l.glowBlur=+e.target.value; glowVal.textContent=l.glowBlur; render(); };
+    rowGlowB.append(glowRng, glowVal);
+    det.appendChild(rowGlowB);
 
     // 線の太さ
     const rowSW = document.createElement("div");
@@ -1558,7 +1628,7 @@ document.getElementById("clearLines").onclick = ()=>{
 };
 
 document.getElementById("addLine").onclick = ()=>{
-  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4"});
+  state.lines.push({text:"", size:80, color:"#1F2328", bold:true, font:0, align:"center", stroke:"none", strokeColor:"#000000", strokeWidth:6, shadow:false, margin:0, textBg:"", textBgOpacity:1, textBgRadius:10, vertical:false, wave:false, valign:"center", textOpacity:1, colorMode:"normal", gradStart:"#FF6B6B", gradEnd:"#4ECDC4", glow:false, glowColor:"#00FFFF", glowBlur:20});
   buildLines(); render();
   const tas = linesEl.querySelectorAll("textarea");
   tas[tas.length-1].focus();
