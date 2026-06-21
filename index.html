@@ -84,14 +84,25 @@
     background:var(--card);border:1px solid var(--line);border-radius:14px;
     padding:14px;margin-bottom:12px;
   }
-  .line-card textarea{
+  .ta-wrap{position:relative}
+  .ta-wrap textarea{
     width:100%;
     border:1.5px solid var(--line);border-radius:10px;background:#FAFAF8;
     font-family:inherit;font-size:17px;font-weight:700;
-    padding:12px;resize:none;outline:none;
+    padding:12px 36px 12px 12px;resize:none;outline:none;box-sizing:border-box;
   }
-  .line-card textarea::placeholder{color:#B5B1A8}
-  .line-card textarea:focus{border-color:var(--accent);background:#FFFFFF}
+  .ta-wrap textarea::placeholder{color:#B5B1A8}
+  .ta-wrap textarea:focus{border-color:var(--accent);background:#FFFFFF}
+  .ta-clear{
+    position:absolute;top:8px;right:8px;
+    width:22px;height:22px;border-radius:50%;
+    background:rgba(0,0,0,.13);border:none;cursor:pointer;
+    font-size:12px;color:#555;display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .15s;pointer-events:none;
+  }
+  .ta-wrap:hover .ta-clear,
+  .ta-wrap textarea:focus ~ .ta-clear{opacity:1;pointer-events:auto}
+  .ta-clear.visible{opacity:1;pointer-events:auto}
 
   .ctrl-row{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
   .ctrl-row.first{margin-top:0}
@@ -490,7 +501,7 @@
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px">
         <div class="sec" style="margin:0">テキスト（行ごとに書体・色・サイズを変えられます）</div>
-        <button id="clearLines" style="font-size:11px;font-weight:800;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 4px;font-family:inherit;letter-spacing:.04em">全クリア</button>
+        <button id="clearLines" style="font-size:12px;font-weight:700;color:#888;background:#F0EDE8;border:1.5px solid #D8D3CC;border-radius:8px;cursor:pointer;padding:4px 10px;font-family:inherit;letter-spacing:.04em">✕ 全クリア</button>
       </div>
       <div id="lines"></div>
       <button class="add-line" id="addLine">＋ 行を追加</button>
@@ -1214,11 +1225,20 @@ function buildLines(){
     const card = document.createElement("div");
     card.className = "line-card";
 
+    const taWrap = document.createElement("div");
+    taWrap.className = "ta-wrap";
     const ta = document.createElement("textarea");
     ta.rows = 2; ta.value = l.text;
     ta.placeholder = "ここに文字を入力（改行すると複数行になります）";
-    ta.oninput = e=>{ l.text = e.target.value; render(); };
-    card.appendChild(ta);
+    const taClr = document.createElement("button");
+    taClr.className = "ta-clear" + (l.text ? " visible" : "");
+    taClr.textContent = "✕";
+    taClr.title = "テキストをクリア";
+    taClr.onclick = ()=>{ l.text=""; ta.value=""; taClr.classList.remove("visible"); render(); ta.focus(); };
+    ta.oninput = e=>{ l.text = e.target.value; taClr.classList.toggle("visible", !!e.target.value); render(); };
+    taWrap.appendChild(ta);
+    taWrap.appendChild(taClr);
+    card.appendChild(taWrap);
 
     const rowF = document.createElement("div");
     rowF.className = "ctrl-row";
