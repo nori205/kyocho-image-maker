@@ -19,6 +19,11 @@
   font-weight: normal;
 }
 @font-face {
+  font-family: 'Shirokuma';
+  src: url('./001Shirokuma-Regular.otf') format('opentype');
+  font-weight: normal;
+}
+@font-face {
   font-family: 'Sacramento';
   src: url('./Sacramento-Regular.ttf') format('truetype');
   font-weight: normal;
@@ -630,6 +635,7 @@ const FONTS = [
   {label:"零ゴシック",    family:'"ZeroGothic",sans-serif',              hasBold:false},
   {label:"しねきゃぷしょん", family:'"Cinecaption",sans-serif',           hasBold:false},
   {label:"サクラメント",     family:'"Sacramento",cursive',               hasBold:false},
+  {label:"シロクマ",        family:'"Shirokuma",sans-serif',             hasBold:false},
 ];
 const TEXT_COLORS = ["#FFFFFF","#1F2328"];
 const BG_COLORS   = ["transparent","#FFFFFF","#1F2328"];
@@ -1218,10 +1224,10 @@ function buildBgOpacity(){
   row.className = "ctrl-row";
   row.innerHTML = '<span class="ctrl-label">透明度</span>';
   const rng = document.createElement("input");
-  rng.type="range"; rng.min=0; rng.max=100; rng.value=Math.round((state.bgOpacity??1)*100);
+  rng.type="range"; rng.min=0; rng.max=100; rng.value=Math.round((1-(state.bgOpacity??1))*100);
   const val = document.createElement("span");
-  val.className="size-val"; val.textContent=Math.round((state.bgOpacity??1)*100)+"%";
-  rng.oninput = e=>{ state.bgOpacity=+e.target.value/100; val.textContent=e.target.value+"%"; render(); };
+  val.className="size-val"; val.textContent=Math.round((1-(state.bgOpacity??1))*100)+"%";
+  rng.oninput = e=>{ state.bgOpacity=1-+e.target.value/100; val.textContent=e.target.value+"%"; render(); };
   row.appendChild(rng); row.appendChild(val);
   bgOpacityEl.appendChild(row);
 }
@@ -1381,10 +1387,10 @@ function buildLines(){
     rowTO.className = "ctrl-row";
     rowTO.innerHTML = '<span class="ctrl-label">文字の透過</span>';
     const toRng = document.createElement("input");
-    toRng.type="range"; toRng.min=0; toRng.max=100; toRng.value=Math.round((l.textOpacity??1)*100);
+    toRng.type="range"; toRng.min=0; toRng.max=100; toRng.value=Math.round((1-(l.textOpacity??1))*100);
     const toVal = document.createElement("span");
-    toVal.className="size-val"; toVal.textContent=Math.round((l.textOpacity??1)*100)+"%";
-    toRng.oninput = e=>{ l.textOpacity=+e.target.value/100; toVal.textContent=e.target.value+"%"; render(); };
+    toVal.className="size-val"; toVal.textContent=Math.round((1-(l.textOpacity??1))*100)+"%";
+    toRng.oninput = e=>{ l.textOpacity=1-+e.target.value/100; toVal.textContent=e.target.value+"%"; render(); };
     rowTO.appendChild(toRng); rowTO.appendChild(toVal);
     det.appendChild(rowTO);
 
@@ -1485,10 +1491,10 @@ function buildLines(){
     rowTBO.style.display = l.textBg ? "flex" : "none";
     rowTBO.innerHTML = '<span class="ctrl-label">透明度</span>';
     const tboRng = document.createElement("input");
-    tboRng.type="range"; tboRng.min=0; tboRng.max=100; tboRng.value=Math.round((l.textBgOpacity??1)*100);
+    tboRng.type="range"; tboRng.min=0; tboRng.max=100; tboRng.value=Math.round((1-(l.textBgOpacity??1))*100);
     const tboVal = document.createElement("span");
-    tboVal.className="size-val"; tboVal.textContent=Math.round((l.textBgOpacity??1)*100)+"%";
-    tboRng.oninput = e=>{ l.textBgOpacity=+e.target.value/100; tboVal.textContent=e.target.value+"%"; render(); };
+    tboVal.className="size-val"; tboVal.textContent=Math.round((1-(l.textBgOpacity??1))*100)+"%";
+    tboRng.oninput = e=>{ l.textBgOpacity=1-+e.target.value/100; tboVal.textContent=e.target.value+"%"; render(); };
     rowTBO.appendChild(tboRng); rowTBO.appendChild(tboVal);
 
     const rowTBR = document.createElement("div");
