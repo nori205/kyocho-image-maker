@@ -710,7 +710,7 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
       ctx.beginPath();ctx.roundRect(cx-ds/2-bpx,cy-bpx,ds+bpx*2,ds+bpx*2,rad);
       ctx.fill();ctx.restore();
     }
-    if(l.glow){
+    if(l.glow && l.stroke !== "cutout"){
       ctx.save();
       ctx.globalAlpha = l.textOpacity ?? 1;
       ctx.fillStyle = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
@@ -721,19 +721,26 @@ function drawVerticalColumn(chars, l, drawSize, s, x){
       ctx.restore();
     }
     ctx.save();
-    ctx.globalAlpha = l.textOpacity ?? 1;
-    if(l.shadow){
-      ctx.shadowColor="rgba(0,0,0,0.35)";ctx.shadowBlur=ds*0.12;
-      ctx.shadowOffsetX=ds*0.04;ctx.shadowOffsetY=ds*0.04;
-    }
     const sw=l.stroke;
-    const sc=sw==="white"?"#FFFFFF":sw==="black"?"#000000":(l.strokeColor||"#000000");
-    const isHollow=sw==="hollow";
-    const hasStroke=sw==="stroke"||sw==="white"||sw==="black"||isHollow;
-    const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
-    if(hasStroke && !isHollow){ctx.strokeStyle=sc;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
-    if(isHollow){ctx.strokeStyle=primColor;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
-    else{ctx.fillStyle=primColor;ctx.fillText(ch,cx,cy);}
+    if(sw === "cutout"){
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(0,0,0,1)";
+      ctx.fillText(ch,cx,cy);
+    } else {
+      ctx.globalAlpha = l.textOpacity ?? 1;
+      if(l.shadow){
+        ctx.shadowColor="rgba(0,0,0,0.35)";ctx.shadowBlur=ds*0.12;
+        ctx.shadowOffsetX=ds*0.04;ctx.shadowOffsetY=ds*0.04;
+      }
+      const sc=sw==="white"?"#FFFFFF":sw==="black"?"#000000":(l.strokeColor||"#000000");
+      const isHollow=sw==="hollow";
+      const hasStroke=sw==="stroke"||sw==="white"||sw==="black"||isHollow;
+      const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
+      if(hasStroke && !isHollow){ctx.strokeStyle=sc;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
+      if(isHollow){ctx.strokeStyle=primColor;ctx.lineWidth=ds*(l.strokeWidth||6)/100;ctx.lineJoin="round";ctx.strokeText(ch,cx,cy);}
+      else{ctx.fillStyle=primColor;ctx.fillText(ch,cx,cy);}
+    }
     ctx.restore();
   });
 }
@@ -801,7 +808,7 @@ function drawWave(l, s, lineIdx, totalWaveLines){
     const waveY = centerY + amp * Math.sin(2 * Math.PI * cx / period);
     const angle = Math.atan(2 * Math.PI * amp / period * Math.cos(2 * Math.PI * cx / period));
 
-    if(l.glow){
+    if(l.glow && l.stroke !== "cutout"){
       ctx.save();
       ctx.globalAlpha = l.textOpacity ?? 1;
       ctx.translate(cx, waveY);
@@ -815,25 +822,31 @@ function drawWave(l, s, lineIdx, totalWaveLines){
       ctx.restore();
     }
     ctx.save();
-    ctx.globalAlpha = l.textOpacity ?? 1;
     ctx.translate(cx, waveY);
     ctx.rotate(angle);
     ctx.textAlign = "center";
-
-    if(l.shadow){
-      ctx.shadowColor = "rgba(0,0,0,0.35)";
-      ctx.shadowBlur = ds * 0.12;
-      ctx.shadowOffsetX = ds * 0.04;
-      ctx.shadowOffsetY = ds * 0.04;
-    }
     const sw = l.stroke;
-    const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
-    const isHollow = sw === "hollow";
-    const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
-    const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
-    if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
-    if(isHollow){ ctx.strokeStyle=primColor; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
-    else{ ctx.fillStyle=primColor; ctx.fillText(ch,0,0); }
+    if(sw === "cutout"){
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "rgba(0,0,0,1)";
+      ctx.fillText(ch, 0, 0);
+    } else {
+      ctx.globalAlpha = l.textOpacity ?? 1;
+      if(l.shadow){
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = ds * 0.12;
+        ctx.shadowOffsetX = ds * 0.04;
+        ctx.shadowOffsetY = ds * 0.04;
+      }
+      const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
+      const isHollow = sw === "hollow";
+      const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
+      const primColor = l.colorMode==="gradient" ? charColor(i,chars.length,l) : l.color;
+      if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
+      if(isHollow){ ctx.strokeStyle=primColor; ctx.lineWidth=ds*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,0,0); }
+      else{ ctx.fillStyle=primColor; ctx.fillText(ch,0,0); }
+    }
     ctx.restore();
 
     curX += w;
@@ -913,7 +926,8 @@ function renderEmph(){
       const pChars = l.colorMode==="gradient" ? [...l.text] : null;
       const pWidths = pChars ? pChars.map(ch => ctx.measureText(ch).width) : null;
       const pTotalW = pWidths ? pWidths.reduce((a,b)=>a+b,0) : 0;
-      if(l.glow){
+      const isCutout = (l.stroke === "cutout");
+      if(l.glow && !isCutout){
         ctx.save();
         ctx.globalAlpha = l.textOpacity ?? 1;
         ctx.shadowColor = l.glowColor || "#00FFFF";
@@ -933,34 +947,52 @@ function renderEmph(){
         }
         ctx.restore();
       }
-      ctx.save();
-      ctx.globalAlpha = l.textOpacity ?? 1;
-      if(l.shadow){
-        ctx.shadowColor = "rgba(0,0,0,0.35)";
-        ctx.shadowBlur = l.drawSize * 0.12;
-        ctx.shadowOffsetX = l.drawSize * 0.04;
-        ctx.shadowOffsetY = l.drawSize * 0.04;
-      }
-      const sw = l.stroke;
-      const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
-      const isHollow = sw === "hollow";
-      const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
-      if(l.colorMode === "gradient"){
-        let px = align==="center" ? x-pTotalW/2 : align==="right" ? x-pTotalW : x;
-        ctx.textAlign = "left";
-        pChars.forEach((ch, pi)=>{
-          const pc = charColor(pi, pChars.length, l);
-          if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,px,y); }
-          if(isHollow){ ctx.strokeStyle=pc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,px,y); }
-          else{ ctx.fillStyle=pc; ctx.fillText(ch,px,y); }
-          px += pWidths[pi];
-        });
+      if(isCutout){
+        ctx.save();
+        ctx.font = fontStr(l, l.drawSize);
+        ctx.textAlign = align;
+        ctx.textBaseline = "top";
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.globalAlpha = 1;
+        if(l.colorMode === "gradient"){
+          ctx.textAlign = "left";
+          let px = align==="center" ? x-pTotalW/2 : align==="right" ? x-pTotalW : x;
+          pChars.forEach((ch,pi)=>{ ctx.fillStyle="rgba(0,0,0,1)"; ctx.fillText(ch,px,y); px+=pWidths[pi]; });
+        } else {
+          ctx.fillStyle = "rgba(0,0,0,1)";
+          ctx.fillText(l.text, x, y);
+        }
+        ctx.restore();
       } else {
-        if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
-        if(isHollow){ ctx.strokeStyle=l.color; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
-        else{ ctx.fillStyle=l.color; ctx.fillText(l.text,x,y); }
+        ctx.save();
+        ctx.globalAlpha = l.textOpacity ?? 1;
+        if(l.shadow){
+          ctx.shadowColor = "rgba(0,0,0,0.35)";
+          ctx.shadowBlur = l.drawSize * 0.12;
+          ctx.shadowOffsetX = l.drawSize * 0.04;
+          ctx.shadowOffsetY = l.drawSize * 0.04;
+        }
+        const sw = l.stroke;
+        const sc = sw === "white" ? "#FFFFFF" : sw === "black" ? "#000000" : (l.strokeColor || "#000000");
+        const isHollow = sw === "hollow";
+        const hasStroke = sw === "stroke" || sw === "white" || sw === "black" || isHollow;
+        if(l.colorMode === "gradient"){
+          let px = align==="center" ? x-pTotalW/2 : align==="right" ? x-pTotalW : x;
+          ctx.textAlign = "left";
+          pChars.forEach((ch, pi)=>{
+            const pc = charColor(pi, pChars.length, l);
+            if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,px,y); }
+            if(isHollow){ ctx.strokeStyle=pc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(ch,px,y); }
+            else{ ctx.fillStyle=pc; ctx.fillText(ch,px,y); }
+            px += pWidths[pi];
+          });
+        } else {
+          if(hasStroke && !isHollow){ ctx.strokeStyle=sc; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
+          if(isHollow){ ctx.strokeStyle=l.color; ctx.lineWidth=l.drawSize*(l.strokeWidth||6)/100; ctx.lineJoin="round"; ctx.strokeText(l.text,x,y); }
+          else{ ctx.fillStyle=l.color; ctx.fillText(l.text,x,y); }
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       y += l.drawSize;
     });
@@ -1413,15 +1445,17 @@ function buildLines(){
     const fxwrap = document.createElement("div");
     fxwrap.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
     const strokeBtns = [];
-    [["none","なし"],["stroke","縁あり"],["hollow","中抜き"]].forEach(([sv,label])=>{
+    [["none","なし"],["stroke","縁あり"],["hollow","中抜き"],["cutout","くり抜き"]].forEach(([sv,label])=>{
       const b = document.createElement("button");
       b.className = "chip" + ((l.stroke||"none")===sv?" active":"");
       b.textContent = label;
       b.onclick = ()=>{
         l.stroke=sv;
         strokeBtns.forEach(([bb,bv])=>{ bb.className="chip"+(bv===sv?" active":""); });
-        swatch.style.display = sv !== "none" ? "inline-block" : "none";
-        rowSW.style.display  = sv !== "none" ? "flex" : "none";
+        const showStroke = sv !== "none" && sv !== "cutout";
+        swatch.style.display = showStroke ? "inline-block" : "none";
+        rowSW.style.display  = showStroke ? "flex" : "none";
+        cutoutHint.style.display = sv === "cutout" ? "block" : "none";
         render();
       };
       strokeBtns.push([b,sv]);
@@ -1431,7 +1465,7 @@ function buildLines(){
     swatch.className = "stroke-swatch";
     swatch.style.background = l.strokeColor || "#000000";
     swatch.title = "縁の色を選ぶ";
-    swatch.style.display = (l.stroke && l.stroke !== "none") ? "inline-block" : "none";
+    swatch.style.display = (l.stroke && l.stroke !== "none" && l.stroke !== "cutout") ? "inline-block" : "none";
     swatch.onclick = ()=> openIroPicker(l.strokeColor||"#000000", hex=>{ l.strokeColor=hex; swatch.style.background=hex; render(); }, "縁の色を選ぶ");
     fxwrap.appendChild(swatch);
     const shadowBtn = document.createElement("button");
@@ -1446,6 +1480,10 @@ function buildLines(){
     fxwrap.appendChild(glowBtn);
     rowFx.appendChild(fxwrap);
     det.appendChild(rowFx);
+    const cutoutHint = document.createElement("div");
+    cutoutHint.style.cssText = "font-size:11px;color:#B6A486;font-weight:700;margin-top:4px;padding-left:44px;display:" + (l.stroke==="cutout" ? "block" : "none");
+    cutoutHint.textContent = "太めのフォントほどくり抜きが映えます";
+    det.appendChild(cutoutHint);
 
     const rowGlowC = document.createElement("div");
     rowGlowC.className = "ctrl-row";
@@ -1475,7 +1513,7 @@ function buildLines(){
     // 線の太さ
     const rowSW = document.createElement("div");
     rowSW.className = "ctrl-row";
-    rowSW.style.display = (l.stroke && l.stroke !== "none") ? "flex" : "none";
+    rowSW.style.display = (l.stroke && l.stroke !== "none" && l.stroke !== "cutout") ? "flex" : "none";
     rowSW.innerHTML = '<span class="ctrl-label">線の太さ</span>';
     const swRng = document.createElement("input");
     swRng.type="range"; swRng.min=1; swRng.max=20; swRng.value=l.strokeWidth||6;
