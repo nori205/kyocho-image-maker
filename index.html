@@ -1911,6 +1911,14 @@ function buildHistory(){
   const wrap = document.createElement("div");
   wrap.className = "hist-wrap";
 
+  // ★お気に入りを先頭に並べ替え
+  const favIds = getFavIds();
+  list.sort((a,b)=>{
+    const af = favIds.includes(a.id) ? 0 : 1;
+    const bf = favIds.includes(b.id) ? 0 : 1;
+    return af - bf;
+  });
+
   list.forEach((item, idx)=>{
     const card = document.createElement("div");
     card.className = "hist-card";
