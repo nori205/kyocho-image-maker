@@ -203,26 +203,22 @@
     background:linear-gradient(to top, var(--paper) 70%, transparent);
     pointer-events:none;
   }
-  .save-bar-inner{
-    display:flex;gap:8px;max-width:560px;margin:0 auto;pointer-events:auto;
-  }
   .save-bar button{
     pointer-events:auto;
-    flex:1;
+    width:100%;max-width:560px;margin:0 auto;display:block;
     background:var(--accent);color:#fff;border:none;border-radius:14px;
     padding:16px;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;
     box-shadow:0 6px 18px rgba(232,68,46,.35);
   }
   .save-bar button:active{transform:translateY(1px)}
-  #btnFavSave{
-    flex:0 0 auto;
-    background:#B6A486;
-    box-shadow:0 4px 12px rgba(182,164,134,.4);
-    font-size:13px;padding:16px 14px;
-  }
-  #btnFavSave:active{background:#96856A}
 
-  /* ===== お気に入り ===== */
+  /* ===== 履歴お気に入り星 ===== */
+  .hist-star{
+    position:absolute;bottom:22px;left:4px;
+    background:rgba(0,0,0,.35);color:#fff;border:none;border-radius:50%;
+    width:18px;height:18px;font-size:11px;cursor:pointer;line-height:18px;text-align:center;padding:0;
+  }
+  .hist-star.on{background:rgba(220,170,0,.9);}
   .hidden{display:none}
 
   .tmpl-wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -417,7 +413,6 @@
     }
     .preview-frame canvas{max-height:62vh}
     .save-bar{position:static;padding:16px 0 0;background:none}
-    .save-bar-inner{max-width:none}
     .save-bar button{max-width:none}
     .pc-save{display:block}
   }
@@ -492,7 +487,6 @@
 
   <!-- 入力エリア -->
   <div class="controls">
-    <div id="favorites"></div>
     <div id="history"></div>
     <div class="backup-row">
       <button class="backup-btn" id="btnBackup">💾 バックアップ</button>
@@ -552,10 +546,7 @@
     </div>
 
     <div class="save-bar">
-      <div class="save-bar-inner">
-        <button id="save">PNG保存</button>
-        <button id="btnFavSave">★ お気に入り</button>
-      </div>
+      <button id="save">画像を保存（PNG）</button>
     </div>
   </div>
 </div>
@@ -1863,125 +1854,16 @@ document.getElementById("ios-save-close").onclick = ()=>{
   document.getElementById("ios-save-img").src = "";
 };
 
-/* ================= お気に入り（IndexedDB） ================= */
-const FAV_DB_NAME = "kyochoFavs";
-const FAV_STORE   = "favs";
-let favDB = null;
-
-function openFavDB(){
-  return new Promise((resolve,reject)=>{
-    if(favDB){ resolve(favDB); return; }
-    const req = indexedDB.open(FAV_DB_NAME, 1);
-    req.onupgradeneeded = e=>{
-      e.target.result.createObjectStore(FAV_STORE, {keyPath:"id", autoIncrement:true});
-    };
-    req.onsuccess = e=>{ favDB = e.target.result; resolve(favDB); };
-    req.onerror   = e=>reject(e);
-  });
+/* ================= 履歴お気に入り ================= */
+const FAV_IDS_KEY = "kyocho_fav_ids";
+function getFavIds(){ try{ return JSON.parse(localStorage.getItem(FAV_IDS_KEY)||"[]"); }catch{ return []; } }
+function toggleFavId(id){
+  const ids = getFavIds();
+  const idx = ids.indexOf(id);
+  if(idx >= 0) ids.splice(idx,1); else ids.push(id);
+  localStorage.setItem(FAV_IDS_KEY, JSON.stringify(ids));
 }
-
-function favTx(mode){ return favDB.transaction(FAV_STORE, mode).objectStore(FAV_STORE); }
-
-function getAllFavs(){
-  return openFavDB().then(()=>new Promise((resolve,reject)=>{
-    const req = favTx("readonly").getAll();
-    req.onsuccess = ()=>resolve(req.result.reverse());
-    req.onerror   = e=>reject(e);
-  }));
-}
-
-function addFav(pngBlob, thumb){
-  return openFavDB().then(()=>new Promise((resolve,reject)=>{
-    const now = new Date();
-    const dateStr = (now.getMonth()+1)+"/"+now.getDate()+" "+
-      String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
-    const req = favTx("readwrite").add({ date:dateStr, png:pngBlob, thumb });
-    req.onsuccess = ()=>resolve(req.result);
-    req.onerror   = e=>reject(e);
-  }));
-}
-
-function deleteFav(id){
-  return openFavDB().then(()=>new Promise((resolve,reject)=>{
-    const req = favTx("readwrite").delete(id);
-    req.onsuccess = ()=>resolve();
-    req.onerror   = e=>reject(e);
-  }));
-}
-
-const favEl = document.getElementById("favorites");
-
-function buildFavorites(){
-  getAllFavs().then(list=>{
-    favEl.innerHTML = "";
-    if(list.length === 0) return;
-
-    const sec = document.createElement("div");
-    sec.className = "sec";
-    sec.textContent = "★ お気に入り";
-    favEl.appendChild(sec);
-
-    const wrap = document.createElement("div");
-    wrap.className = "hist-wrap";
-
-    list.forEach(item=>{
-      const card = document.createElement("div");
-      card.className = "hist-card";
-      card.title = item.date + " 保存";
-
-      const img = document.createElement("img");
-      img.src = item.thumb;
-      img.className = "hist-thumb";
-      card.appendChild(img);
-
-      const date = document.createElement("div");
-      date.className = "hist-date";
-      date.textContent = item.date;
-      card.appendChild(date);
-
-      const del = document.createElement("button");
-      del.className = "hist-del";
-      del.textContent = "✕";
-      del.onclick = e=>{
-        e.stopPropagation();
-        deleteFav(item.id).then(()=>buildFavorites());
-      };
-      card.appendChild(del);
-
-      wrap.appendChild(card);
-    });
-    favEl.appendChild(wrap);
-  });
-}
-
-const btnFavSave = document.getElementById("btnFavSave");
-btnFavSave.onclick = ()=>{
-  render();
-  cv.toBlob(blob=>{
-    const thumbCanvas = document.createElement("canvas");
-    thumbCanvas.width = 160;
-    thumbCanvas.height = Math.round(cv.height * 160 / cv.width);
-    const tCtx = thumbCanvas.getContext("2d");
-    tCtx.fillStyle = "#fff";
-    tCtx.fillRect(0,0,thumbCanvas.width,thumbCanvas.height);
-    tCtx.drawImage(cv,0,0,thumbCanvas.width,thumbCanvas.height);
-    const thumb = thumbCanvas.toDataURL("image/jpeg", 0.6);
-    addFav(blob, thumb).then(()=>{
-      buildFavorites();
-      // ボタンに「✓ 追加！」を表示して上部へスクロール
-      const orig = btnFavSave.textContent;
-      btnFavSave.textContent = "✓ 追加！";
-      btnFavSave.disabled = true;
-      setTimeout(()=>{ btnFavSave.textContent = orig; btnFavSave.disabled = false; }, 1500);
-      // 固定プレビューの高さ分だけずらしてスクロール
-      const ph = document.querySelector('.preview-pane').offsetHeight;
-      const top = window.scrollY + favEl.getBoundingClientRect().top - ph - 8;
-      window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
-    }).catch(()=>{
-      alert("保存に失敗しました。ブラウザのプライベートモードでは使えない場合があります。");
-    });
-  }, "image/png");
-};
+function isFavId(id){ return getFavIds().includes(id); }
 
 /* ================= 履歴 ================= */
 const HIST_KEY = "kyocho_history";
@@ -2048,6 +1930,17 @@ function buildHistory(){
     date.className = "hist-date";
     date.textContent = item.date;
     card.appendChild(date);
+
+    const star = document.createElement("button");
+    star.className = "hist-star" + (isFavId(item.id) ? " on" : "");
+    star.textContent = "★";
+    star.title = isFavId(item.id) ? "お気に入り解除" : "お気に入り";
+    star.onclick = e=>{
+      e.stopPropagation();
+      toggleFavId(item.id);
+      buildHistory();
+    };
+    card.appendChild(star);
 
     const del = document.createElement("button");
     del.className = "hist-del";
@@ -2470,7 +2363,8 @@ document.getElementById("iro-close").onclick = ()=>{
 const BACKUP_KEYS = [
   "kyocho_history","kyocho_templates",
   "kyocho_fav_colors","kyocho_color_hist",
-  "kyocho_icon_favs","kyocho_icon_hist"
+  "kyocho_icon_favs","kyocho_icon_hist",
+  "kyocho_fav_ids"
 ];
 
 document.getElementById("btnBackup").onclick = ()=>{
@@ -2516,7 +2410,7 @@ document.getElementById("restoreFile").onchange = e=>{
 /* ================= 初期化 ================= */
 buildSizes(); buildBg(); buildDir(); buildLines();
 buildChatBg(); buildPersons(); buildMsgs();
-buildTemplates(); buildHistory(); buildFavorites();
+buildTemplates(); buildHistory();
 render();
 updateSizeLbl(); updateBgLbl();
 if(document.fonts && document.fonts.ready){
