@@ -1975,7 +1975,8 @@ function buildFavorites(){
   });
 }
 
-document.getElementById("btnFavSave").onclick = ()=>{
+const btnFavSave = document.getElementById("btnFavSave");
+btnFavSave.onclick = ()=>{
   render();
   cv.toBlob(blob=>{
     const thumbCanvas = document.createElement("canvas");
@@ -1986,7 +1987,17 @@ document.getElementById("btnFavSave").onclick = ()=>{
     tCtx.fillRect(0,0,thumbCanvas.width,thumbCanvas.height);
     tCtx.drawImage(cv,0,0,thumbCanvas.width,thumbCanvas.height);
     const thumb = thumbCanvas.toDataURL("image/jpeg", 0.6);
-    addFav(blob, thumb).then(()=>buildFavorites());
+    addFav(blob, thumb).then(()=>{
+      buildFavorites();
+      // ボタンに「✓ 追加！」を表示して上部へスクロール
+      const orig = btnFavSave.textContent;
+      btnFavSave.textContent = "✓ 追加！";
+      btnFavSave.disabled = true;
+      setTimeout(()=>{ btnFavSave.textContent = orig; btnFavSave.disabled = false; }, 1500);
+      favEl.scrollIntoView({behavior:"smooth", block:"start"});
+    }).catch(()=>{
+      alert("保存に失敗しました。ブラウザのプライベートモードでは使えない場合があります。");
+    });
   }, "image/png");
 };
 
