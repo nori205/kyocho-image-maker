@@ -223,12 +223,6 @@
   #btnFavSave:active{background:#96856A}
 
   /* ===== お気に入り ===== */
-  .fav-share-btn{
-    position:absolute;top:4px;left:4px;
-    background:rgba(50,120,255,.75);color:#fff;border:none;border-radius:50%;
-    width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center;padding:0;
-  }
-  .fav-share-btn:hover{background:rgba(30,90,200,.9)}
   .hidden{display:none}
 
   .tmpl-wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -1924,7 +1918,7 @@ function buildFavorites(){
 
     const sec = document.createElement("div");
     sec.className = "sec";
-    sec.textContent = "★ お気に入り（📤で共有・ストーリーズへ）";
+    sec.textContent = "★ お気に入り";
     favEl.appendChild(sec);
 
     const wrap = document.createElement("div");
@@ -1944,21 +1938,6 @@ function buildFavorites(){
       date.className = "hist-date";
       date.textContent = item.date;
       card.appendChild(date);
-
-      const shareBtn = document.createElement("button");
-      shareBtn.className = "fav-share-btn";
-      shareBtn.textContent = "📤";
-      shareBtn.title = "共有（Instagram ストーリーズなど）";
-      shareBtn.onclick = e=>{
-        e.stopPropagation();
-        const file = new File([item.png], "kyocho-image.png", {type:"image/png"});
-        if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-          navigator.share({files:[file], title:"強調文字画像"}).catch(()=>{});
-        } else {
-          alert("お使いのブラウザは共有機能に対応していません。\n長押しで画像を保存してからシェアしてください。");
-        }
-      };
-      card.appendChild(shareBtn);
 
       const del = document.createElement("button");
       del.className = "hist-del";
