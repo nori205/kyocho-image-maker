@@ -1994,7 +1994,10 @@ btnFavSave.onclick = ()=>{
       btnFavSave.textContent = "✓ 追加！";
       btnFavSave.disabled = true;
       setTimeout(()=>{ btnFavSave.textContent = orig; btnFavSave.disabled = false; }, 1500);
-      favEl.scrollIntoView({behavior:"smooth", block:"start"});
+      // 固定プレビューの高さ分だけずらしてスクロール
+      const ph = document.querySelector('.preview-pane').offsetHeight;
+      const top = window.scrollY + favEl.getBoundingClientRect().top - ph - 8;
+      window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
     }).catch(()=>{
       alert("保存に失敗しました。ブラウザのプライベートモードでは使えない場合があります。");
     });
