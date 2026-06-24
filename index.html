@@ -1228,7 +1228,7 @@ function buildDir(){
 
   const btnRow = document.createElement("div");
   btnRow.style.cssText = "display:flex;gap:8px;flex-wrap:wrap";
-  [["横書き","horizontal"],["縦書き","vertical"],["〜 波打ち","wave"]].forEach(([label,m])=>{
+  [["横書き","horizontal"],["縦書き","vertical"],["〜 ウェーブ","wave"]].forEach(([label,m])=>{
     const b = document.createElement("button");
     b.className = "chip" + (curMode===m?" active":"");
     b.textContent = label;
